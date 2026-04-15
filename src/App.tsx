@@ -16,8 +16,10 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { DragEvent, ReactNode } from 'react';
+import type { DragEvent } from 'react';
 import { CanvasElement, COMPONENT_DRAG_MIME } from './components/CanvasElement';
+import { ElementTreeNode } from './components/ElementTreeNode';
+import { SidebarSection } from './components/SidebarSection';
 import { TexturePanel } from './components/TexturePanel';
 import { useI18nStore, useT } from './lib/i18n';
 import {
@@ -253,29 +255,7 @@ function App() {
     setDraggingType(null);
   }
 
-  function renderElementTree(items: UIElement[], depth = 0): ReactNode {
-    return items.map((element) => (
-      <li key={element.id}>
-        <button
-          type="button"
-          onClick={() => selectElement(element.id)}
-          className={`flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs transition-colors ${
-            selectedId === element.id
-              ? 'bg-blue-600/20 text-blue-400'
-              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
-          }`}
-          style={{ paddingLeft: `${depth * 14 + 12}px` }}
-        >
-          <Layers className="h-3 w-3 opacity-70" />
-          <span className="min-w-0 flex-1 truncate">{element.name}</span>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{element.type}</span>
-        </button>
-        {element.children.length > 0 && (
-          <ul className="space-y-1">{renderElementTree(element.children, depth + 1)}</ul>
-        )}
-      </li>
-    ));
-  }
+
 
   const insertTargetLabel = insertParentElement
     ? `${insertParentElement.name} (${insertParentElement.type})`
@@ -303,10 +283,7 @@ function App() {
             </button>
 
             {project && (
-              <div>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                  {t('sidebar.uiFiles')}
-                </h2>
+              <SidebarSection title={t('sidebar.uiFiles')}>
                 <ul className="space-y-1 text-sm">
                   {project.uiFiles.map((file) => (
                     <li
@@ -326,19 +303,17 @@ function App() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </SidebarSection>
             )}
 
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                  {t('sidebar.components')}
-                </h2>
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-600">
+            <SidebarSection
+              title={t('sidebar.components')}
+              extra={
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-600 font-normal normal-case tracking-normal">
                   {t('sidebar.target', { label: insertTargetLabel })}
                 </span>
-              </div>
-
+              }
+            >
               <div className="space-y-2">
                 {ADDABLE_ELEMENT_TYPES.map((type) => (
                   <button
@@ -373,15 +348,22 @@ function App() {
               <p className="mt-2 text-[10px] leading-4 text-zinc-400 dark:text-zinc-600">
                 {t('sidebar.dragHint')}
               </p>
-            </div>
+            </SidebarSection>
 
             {elementCount > 0 && (
-              <div>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                  {t('sidebar.elements', { count: elementCount })}
-                </h2>
-                <ul className="space-y-1">{renderElementTree(elements)}</ul>
-              </div>
+              <SidebarSection title={t('sidebar.elements', { count: elementCount })}>
+                <ul className="space-y-0.5">
+                  {elements.map((element) => (
+                    <ElementTreeNode
+                      key={element.id}
+                      element={element}
+                      depth={0}
+                      selectedId={selectedId}
+                      onSelect={selectElement}
+                    />
+                  ))}
+                </ul>
+              </SidebarSection>
             )}
 
             <TexturePanel />
