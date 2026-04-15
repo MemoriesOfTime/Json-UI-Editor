@@ -1,4 +1,6 @@
 import {
+  ChevronLeft,
+  ChevronRight,
   Download,
   FolderOpen,
   Languages,
@@ -82,6 +84,7 @@ function App() {
   const setLocale = useI18nStore((s) => s.setLocale);
 
   const [showPreview, setShowPreview] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draggingType, setDraggingType] = useState<ElementType | null>(null);
@@ -385,6 +388,21 @@ function App() {
         className="relative flex flex-1 flex-col overflow-hidden"
         onClick={() => selectElement(null)}
       >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsRightSidebarOpen(!isRightSidebarOpen);
+          }}
+          className="absolute right-0 top-1/2 z-50 flex h-16 w-5 -translate-y-1/2 items-center justify-center rounded-l-md border border-r-0 border-zinc-800 bg-zinc-900/90 text-zinc-500 shadow-md backdrop-blur transition-all hover:bg-zinc-800 hover:text-zinc-300"
+          title={t('btn.toggleRightSidebar')}
+        >
+          {isRightSidebarOpen ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </button>
+
         <header
           className="flex h-14 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-4"
           onClick={(event) => event.stopPropagation()}
@@ -483,15 +501,20 @@ function App() {
         </div>
       </main>
 
-      <aside className="flex w-80 flex-col border-l border-zinc-800 bg-zinc-900/50">
-        <div className="border-b border-zinc-800 p-4">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
-            <Settings className="h-4 w-4" />
-            {t('props.title')}
-          </h2>
-        </div>
+      <aside
+        className={`flex flex-col overflow-hidden border-zinc-800 bg-zinc-900/50 transition-all duration-300 ${
+          isRightSidebarOpen ? 'w-80 border-l' : 'w-0 border-l-0'
+        }`}
+      >
+        <div className="flex h-full w-80 flex-col">
+          <div className="border-b border-zinc-800 p-4">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+              <Settings className="h-4 w-4" />
+              {t('props.title')}
+            </h2>
+          </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
           {!selectedElement ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center text-zinc-500">
               <MousePointer2 className="h-8 w-8 opacity-20" />
@@ -886,6 +909,7 @@ function App() {
               )}
             </>
           )}
+        </div>
         </div>
       </aside>
 

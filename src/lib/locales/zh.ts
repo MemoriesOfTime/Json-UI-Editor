@@ -11,6 +11,7 @@ export const zh: Record<string, string> = {
   'btn.preview': '预览',
   'btn.close': '关闭',
   'btn.copyToClipboard': '复制到剪贴板',
+  'btn.toggleRightSidebar': '切换右侧属性栏',
 
   // 侧边栏
   'sidebar.uiFiles': 'UI 文件',

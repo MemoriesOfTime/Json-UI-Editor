@@ -11,6 +11,7 @@ export const en: Record<string, string> = {
   'btn.preview': 'Preview',
   'btn.close': 'Close',
   'btn.copyToClipboard': 'Copy to Clipboard',
+  'btn.toggleRightSidebar': 'Toggle Right Sidebar',
 
   // Sidebar
   'sidebar.uiFiles': 'UI Files',
