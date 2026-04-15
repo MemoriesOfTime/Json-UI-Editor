@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Upload, Trash2 } from 'lucide-react';
+import { useT } from '../lib/i18n';
 import { useStore } from '../store/useStore';
 import { useTextureLoader } from './useTextureLoader';
 
@@ -7,6 +8,7 @@ export function TexturePanel() {
   const textureMap = useStore((s) => s.textureMap);
   const removeTexture = useStore((s) => s.removeTexture);
   const { loadFiles } = useTextureLoader();
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const entries = Object.values(textureMap);
@@ -21,7 +23,7 @@ export function TexturePanel() {
   return (
     <div className="space-y-3">
       <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-        Textures
+        {t('texture.title')}
       </h2>
 
       <div
@@ -31,7 +33,7 @@ export function TexturePanel() {
         className="border border-dashed border-zinc-700 rounded-lg p-3 text-center cursor-pointer hover:border-zinc-500 hover:bg-zinc-800/50 transition-colors"
       >
         <Upload className="w-5 h-5 mx-auto mb-1 opacity-40" />
-        <p className="text-xs text-zinc-500">Drop images or click to upload</p>
+        <p className="text-xs text-zinc-500">{t('texture.dropHint')}</p>
       </div>
 
       <input

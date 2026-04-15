@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DragEvent, MouseEvent } from 'react';
+import type { CSSProperties, DragEvent, MouseEvent } from 'react';
 import { Rnd } from 'react-rnd';
 import { Image as ImageIcon } from 'lucide-react';
 import { getTextureLookupCandidates } from '../lib/texturePath';
@@ -79,13 +79,106 @@ export function CanvasElement({
   const renderContent = () => {
     if (el.type === 'image') {
       if (textureAsset) {
+        const bilinear = el.bilinear === true;
+        const rendering: CSSProperties['imageRendering'] = bilinear ? 'auto' : 'pixelated';
+        const filters: string[] = [];
+        if (el.grayscale) filters.push('grayscale(1)');
+        const filterStr = filters.length > 0 ? filters.join(' ') : undefined;
+
+        // clip_direction / clip_ratio 裁剪
+        let clipStyle: CSSProperties | undefined;
+        if (el.clip_direction && el.clip_ratio !== undefined) {
+          const r = Math.max(0, Math.min(1, el.clip_ratio));
+          const hidden = (1 - r) * 100;
+          switch (el.clip_direction) {
+            case 'left':   clipStyle = { clipPath: `inset(0 ${hidden}% 0 0)` }; break;
+            case 'right':  clipStyle = { clipPath: `inset(0 0 0 ${hidden}%)` }; break;
+            case 'up':     clipStyle = { clipPath: `inset(0 0 ${hidden}% 0)` }; break;
+            case 'down':   clipStyle = { clipPath: `inset(${hidden}% 0 0 0)` }; break;
+            case 'center': {
+              const h = hidden / 2;
+              clipStyle = { clipPath: `inset(${h}% ${h}% ${h}% ${h}%)` };
+              break;
+            }
+          }
+        }
+
+        const colorOverlay = el.color ? (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundColor: `rgb(${el.color[0] * 255},${el.color[1] * 255},${el.color[2] * 255})`,
+              mixBlendMode: 'multiply',
+            }}
+          />
+        ) : null;
+
+        // 九宫格(nineslice)渲染
+        if (el.nineslice_size !== undefined) {
+          let sT: number, sR: number, sB: number, sL: number;
+          if (typeof el.nineslice_size === 'number') {
+            sT = sR = sB = sL = el.nineslice_size;
+          } else {
+            [sL, sT, sR, sB] = el.nineslice_size;
+          }
+          const repeatMode =
+            el.tiled === true ? 'round' :
+            el.tiled === 'x' ? 'round stretch' :
+            el.tiled === 'y' ? 'stretch round' : 'stretch';
+
+          return (
+            <div className="absolute inset-0" style={clipStyle}>
+              <div
+                className="absolute inset-0"
+                style={{
+                  borderStyle: 'solid',
+                  borderWidth: `${sT}px ${sR}px ${sB}px ${sL}px`,
+                  borderImageSource: `url(${textureAsset.objectUrl})`,
+                  borderImageSlice: `${sT} ${sR} ${sB} ${sL} fill`,
+                  borderImageWidth: `${sT}px ${sR}px ${sB}px ${sL}px`,
+                  borderImageRepeat: repeatMode,
+                  imageRendering: rendering,
+                  filter: filterStr,
+                  boxSizing: 'border-box',
+                }}
+              />
+              {colorOverlay}
+            </div>
+          );
+        }
+
+        // 平铺(tiled)渲染
+        if (el.tiled === true || el.tiled === 'x' || el.tiled === 'y') {
+          const scX = el.tiled_scale?.[0] ?? 1;
+          const scY = el.tiled_scale?.[1] ?? 1;
+          const uvW = el.uv_size?.[0] ?? textureAsset.naturalWidth;
+          const uvH = el.uv_size?.[1] ?? textureAsset.naturalHeight;
+          const repeat = el.tiled === 'x' ? 'repeat-x' : el.tiled === 'y' ? 'repeat-y' : 'repeat';
+
+          return (
+            <div className="absolute inset-0" style={clipStyle}>
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `url(${textureAsset.objectUrl})`,
+                  backgroundRepeat: repeat,
+                  backgroundSize: `${uvW * scX}px ${uvH * scY}px`,
+                  imageRendering: rendering,
+                  filter: filterStr,
+                }}
+              />
+              {colorOverlay}
+            </div>
+          );
+        }
+
+        // 标准 UV 渲染
         const uvX = el.uv?.[0] ?? 0;
         const uvY = el.uv?.[1] ?? 0;
         const uvW = el.uv_size?.[0] ?? textureAsset.naturalWidth;
         const uvH = el.uv_size?.[1] ?? textureAsset.naturalHeight;
-        const keepRatio = el.keep_ratio !== false;
+        const keepRatio = el.keep_ratio === true;
         const fill = el.fill === true;
-        const bilinear = el.bilinear === true;
         const scaleXRaw = uvW > 0 ? el.size[0] / uvW : 1;
         const scaleYRaw = uvH > 0 ? el.size[1] / uvH : 1;
         const uniformScale = keepRatio
@@ -101,7 +194,7 @@ export function CanvasElement({
         const offsetY = keepRatio ? (el.size[1] - sourceHeight) / 2 : 0;
 
         return (
-          <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0 overflow-hidden" style={clipStyle}>
             <img
               src={textureAsset.objectUrl}
               alt={el.name}
@@ -112,18 +205,11 @@ export function CanvasElement({
                 top: offsetY - uvY * scaleY,
                 width: textureAsset.naturalWidth * scaleX,
                 height: textureAsset.naturalHeight * scaleY,
-                imageRendering: bilinear ? 'auto' : 'pixelated',
+                imageRendering: rendering,
+                filter: filterStr,
               }}
             />
-            {el.color && (
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundColor: `rgb(${el.color[0] * 255},${el.color[1] * 255},${el.color[2] * 255})`,
-                  mixBlendMode: 'multiply',
-                }}
-              />
-            )}
+            {colorOverlay}
           </div>
         );
       }
@@ -158,14 +244,58 @@ export function CanvasElement({
       );
     }
 
-    if (el.type === 'panel' || el.type === 'collection_panel') {
+    if (el.type === 'panel' || el.type === 'collection_panel' ||
+        el.type === 'input_panel' || el.type === 'screen') {
+      const typeLabel = el.type !== 'panel' ? el.type : null;
       return (
         <div className="absolute inset-0 border border-dashed border-zinc-700 bg-zinc-800/30">
-          {el.type === 'collection_panel' && (
+          {typeLabel && (
             <span className="absolute left-1 top-0.5 text-[9px] text-zinc-600">
-              collection_panel
+              {typeLabel}
             </span>
           )}
+        </div>
+      );
+    }
+
+    if (el.type === 'stack_panel') {
+      const isHorizontal = el.orientation === 'horizontal';
+      return (
+        <div className="absolute inset-0 border border-dashed border-teal-800 bg-teal-900/20">
+          <span className="absolute left-1 top-0.5 text-[9px] text-teal-600">
+            stack_panel ({isHorizontal ? 'H' : 'V'})
+          </span>
+        </div>
+      );
+    }
+
+    if (el.type === 'scroll_view') {
+      return (
+        <div className="absolute inset-0 border border-dashed border-indigo-800 bg-indigo-900/20">
+          <span className="absolute left-1 top-0.5 text-[9px] text-indigo-600">
+            scroll_view
+          </span>
+        </div>
+      );
+    }
+
+    if (el.type === 'button' || el.type === 'toggle' || el.type === 'dropdown') {
+      return (
+        <div className="absolute inset-0 border border-solid border-zinc-600 bg-zinc-700/40">
+          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-400">
+            {el.type}
+          </span>
+        </div>
+      );
+    }
+
+    if (el.type === 'slider' || el.type === 'slider_box' ||
+        el.type === 'edit_box' || el.type === 'scrollbar_track' || el.type === 'scrollbar_box') {
+      return (
+        <div className="absolute inset-0 border border-solid border-zinc-600 bg-zinc-800/40">
+          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-500">
+            {el.type}
+          </span>
         </div>
       );
     }
@@ -174,6 +304,14 @@ export function CanvasElement({
       return (
         <div className="absolute inset-0 flex items-center justify-center border border-dotted border-zinc-600 bg-zinc-800/20">
           <span className="text-[9px] text-zinc-600">{el.type}</span>
+        </div>
+      );
+    }
+
+    if (el.type === 'custom' || el.type === 'selection_wheel') {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-amber-800 bg-amber-900/20">
+          <span className="text-[9px] text-amber-600">{el.type}</span>
         </div>
       );
     }

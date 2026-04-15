@@ -9,7 +9,21 @@ export type ElementType =
   | 'collection_panel'
   | 'chest_grid_item'
   | 'factory'
-  | 'grid';
+  | 'grid'
+  | 'button'
+  | 'toggle'
+  | 'dropdown'
+  | 'slider'
+  | 'slider_box'
+  | 'edit_box'
+  | 'input_panel'
+  | 'stack_panel'
+  | 'scroll_view'
+  | 'scrollbar_track'
+  | 'scrollbar_box'
+  | 'screen'
+  | 'custom'
+  | 'selection_wheel';
 
 export type AnchorType =
   | 'top_left'
@@ -45,9 +59,19 @@ export interface UIElement {
   keep_ratio?: boolean;
   fill?: boolean;
   bilinear?: boolean;
+  grayscale?: boolean;
+  nineslice_size?: number | [number, number, number, number];
+  tiled?: boolean | string;
+  tiled_scale?: [number, number];
+  clip_direction?: string;
+  clip_ratio?: number;
+  clip_pixelperfect?: boolean;
+  texture_file_system?: string;
+  base_size?: [number, number];
   layer?: number;
   visible?: boolean;
   propagate_alpha?: boolean;
+  orientation?: string;
   children: UIElement[];
 }
 
@@ -107,6 +131,12 @@ const CONTAINER_TYPES = new Set<ElementType>([
   'collection_panel',
   'factory',
   'grid',
+  'input_panel',
+  'stack_panel',
+  'scroll_view',
+  'screen',
+  'button',
+  'toggle',
 ]);
 
 const DEFAULT_ELEMENT_SIZES: Record<ElementType, [number, number]> = {
@@ -117,11 +147,26 @@ const DEFAULT_ELEMENT_SIZES: Record<ElementType, [number, number]> = {
   chest_grid_item: [18, 18],
   factory: [120, 40],
   grid: [140, 100],
+  button: [140, 30],
+  toggle: [140, 30],
+  dropdown: [140, 30],
+  slider: [140, 20],
+  slider_box: [10, 20],
+  edit_box: [140, 24],
+  input_panel: [140, 100],
+  stack_panel: [140, 100],
+  scroll_view: [140, 100],
+  scrollbar_track: [10, 100],
+  scrollbar_box: [10, 20],
+  screen: [320, 240],
+  custom: [100, 100],
+  selection_wheel: [100, 100],
 };
 
 /**
- * 解析 Bedrock UI 的百分比尺寸值
- * 支持: 数字、"100%"、"50%sm"、"100%cm"、"100%cx"、"100%cy"、"100%x"、"100%y"
+ * 解析 Bedrock UI 的尺寸值
+ * 支持: 数字、"100%"、"50%sm"、"100%cm"、"100%c"、"100%cx"、"100%cy"、
+ *       "100%x"、"100%y"、"fill"、"default"、"10px"、"50% + 10px"
  */
 function resolveSizeValue(
   raw: unknown,
@@ -132,25 +177,53 @@ function resolveSizeValue(
   if (typeof raw === 'number') return raw;
   if (typeof raw !== 'string') return parentSize[axis];
 
+  if (raw === 'default') return parentSize[axis];
+  if (raw === 'fill') return parentSize[axis];
+
+  // "10px" 格式
+  const pxMatch = raw.match(/^(-?\d+(?:\.\d+)?)px$/);
+  if (pxMatch) return parseFloat(pxMatch[1]);
+
+  // "50% + 10px" 算术表达式
+  const exprMatch = raw.match(/^(-?\d+(?:\.\d+)?)(%\w*)\s*([+-])\s*(-?\d+(?:\.\d+)?)px$/);
+  if (exprMatch) {
+    const pctVal = parseFloat(exprMatch[1]) / 100;
+    const suffix = exprMatch[2].slice(1);
+    const op = exprMatch[3];
+    const px = parseFloat(exprMatch[4]);
+    const base = resolvePercentSuffix(pctVal, suffix, axis, parentSize, canvasSize);
+    return op === '+' ? base + px : base - px;
+  }
+
+  // 百分比格式
   const match = raw.match(/^(-?\d+(?:\.\d+)?)%/);
   if (!match) {
-    if (raw === 'default') return parentSize[axis];
     const num = Number(raw);
     return Number.isFinite(num) ? num : parentSize[axis];
   }
 
   const pct = parseFloat(match[1]) / 100;
   const suffix = raw.slice(raw.indexOf('%') + 1);
+  return resolvePercentSuffix(pct, suffix, axis, parentSize, canvasSize);
+}
 
+function resolvePercentSuffix(
+  pct: number,
+  suffix: string,
+  axis: 0 | 1,
+  parentSize: [number, number],
+  canvasSize: [number, number],
+): number {
   switch (suffix) {
-    case '': return parentSize[axis] * pct;
+    case '':  return parentSize[axis] * pct;
     case 'x': return parentSize[0] * pct;
     case 'y': return parentSize[1] * pct;
-    case 'sm': return Math.min(canvasSize[0], canvasSize[1]) * pct;
-    case 'cm': return Math.min(canvasSize[0], canvasSize[1]) * pct;
+    case 'c': return parentSize[axis] * pct;   // children 百分比，近似用 parent
+    case 'cm': return parentSize[axis] * pct;  // 最大子元素百分比，近似用 parent
+    case 'sm': return parentSize[axis] * pct;  // 兄弟元素百分比，近似用 parent
     case 'cx': return canvasSize[0] * pct;
     case 'cy': return canvasSize[1] * pct;
-    default: return parentSize[axis] * pct;
+    default:  return parentSize[axis] * pct;
   }
 }
 
@@ -230,9 +303,19 @@ function controlToElement(
   if (ctrl.keep_ratio !== undefined) el.keep_ratio = ctrl.keep_ratio;
   if (ctrl.fill !== undefined) el.fill = ctrl.fill;
   if (ctrl.bilinear !== undefined) el.bilinear = ctrl.bilinear;
+  if (ctrl.grayscale !== undefined) el.grayscale = ctrl.grayscale;
+  if (ctrl.nineslice_size !== undefined) el.nineslice_size = ctrl.nineslice_size;
+  if (ctrl.tiled !== undefined) el.tiled = ctrl.tiled;
+  if (ctrl.tiled_scale) el.tiled_scale = ctrl.tiled_scale;
+  if (ctrl.clip_direction) el.clip_direction = ctrl.clip_direction;
+  if (ctrl.clip_ratio !== undefined) el.clip_ratio = ctrl.clip_ratio;
+  if (ctrl.clip_pixelperfect !== undefined) el.clip_pixelperfect = ctrl.clip_pixelperfect;
+  if (ctrl.texture_file_system) el.texture_file_system = ctrl.texture_file_system;
+  if (ctrl.base_size) el.base_size = ctrl.base_size;
   if (ctrl.layer !== undefined) el.layer = ctrl.layer;
   if (ctrl.visible !== undefined) el.visible = ctrl.visible;
   if (ctrl.propagate_alpha !== undefined) el.propagate_alpha = ctrl.propagate_alpha;
+  if (ctrl.orientation) el.orientation = ctrl.orientation;
 
   return el;
 }

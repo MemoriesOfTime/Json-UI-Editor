@@ -50,6 +50,15 @@ function serializeElement(el: UIElement): Record<string, unknown> {
     setOptionalProp(baseProps, 'keep_ratio', el.keep_ratio);
     setOptionalProp(baseProps, 'fill', el.fill);
     setOptionalProp(baseProps, 'bilinear', el.bilinear);
+    setOptionalProp(baseProps, 'grayscale', el.grayscale);
+    setOptionalProp(baseProps, 'nineslice_size', el.nineslice_size);
+    setOptionalProp(baseProps, 'tiled', el.tiled);
+    setOptionalProp(baseProps, 'tiled_scale', el.tiled_scale);
+    setOptionalProp(baseProps, 'clip_direction', el.clip_direction);
+    setOptionalProp(baseProps, 'clip_ratio', el.clip_ratio);
+    setOptionalProp(baseProps, 'clip_pixelperfect', el.clip_pixelperfect);
+    setOptionalProp(baseProps, 'texture_file_system', el.texture_file_system);
+    setOptionalProp(baseProps, 'base_size', el.base_size);
   }
 
   if (el.type === 'label') {

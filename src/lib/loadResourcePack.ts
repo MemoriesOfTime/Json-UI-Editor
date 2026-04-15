@@ -1,4 +1,5 @@
 import type { ParsedUiFile, ParsedRoute } from '../lib/parseUiJson';
+import { t } from './i18n';
 import { parseUiJson, parseRoutesFromChestScreen } from '../lib/parseUiJson';
 import type { TextureAsset } from '../store/useStore';
 import { toCanonicalTexturePath } from './texturePath';
@@ -141,7 +142,7 @@ export async function saveUiFile(
 ): Promise<void> {
   const uiDir = await getSubDir(dirHandle, 'ui');
   if (!uiDir) {
-    throw new Error('未找到 ui 目录');
+    throw new Error(t('status.uiDirNotFound'));
   }
 
   const fileHandle = await uiDir.getFileHandle(fileName);

@@ -1,6 +1,7 @@
 import {
   Download,
   FolderOpen,
+  Languages,
   LayoutDashboard,
   Layers,
   MousePointer2,
@@ -10,10 +11,17 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
 import { CanvasElement, COMPONENT_DRAG_MIME } from './components/CanvasElement';
 import { TexturePanel } from './components/TexturePanel';
+import { useI18nStore, useT } from './lib/i18n';
+import {
+  loadResourcePack,
+  loadTextureAssets,
+  saveUiFile,
+} from './lib/loadResourcePack';
+import { serializeUiFile } from './lib/serializeUiFile';
 import {
   ADDABLE_ELEMENT_TYPES,
   ANCHOR_OPTIONS,
@@ -25,25 +33,6 @@ import {
   useStore,
 } from './store/useStore';
 import type { ElementType, UIElement } from './store/useStore';
-import {
-  loadResourcePack,
-  loadTextureAssets,
-  saveUiFile,
-} from './lib/loadResourcePack';
-import { serializeUiFile } from './lib/serializeUiFile';
-
-const ELEMENT_META: Record<
-  ElementType,
-  { label: string; description: string }
-> = {
-  panel: { label: 'Panel', description: '通用容器' },
-  image: { label: 'Image', description: '背景与贴图' },
-  label: { label: 'Label', description: '文本元素' },
-  collection_panel: { label: 'Collection Panel', description: '物品集合容器' },
-  chest_grid_item: { label: 'Chest Grid Item', description: '箱子槽位实例' },
-  factory: { label: 'Factory', description: '模板工厂' },
-  grid: { label: 'Grid', description: '网格容器' },
-};
 
 function clampPosition(
   position: [number, number],
@@ -88,11 +77,19 @@ function App() {
     addTexture,
   } = useStore();
 
+  const t = useT();
+  const locale = useI18nStore((s) => s.locale);
+  const setLocale = useI18nStore((s) => s.setLocale);
+
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draggingType, setDraggingType] = useState<ElementType | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const selectedElement = findElementById(elements, selectedId);
   const insertParentId = getInsertParentId(elements, selectedId);
@@ -107,7 +104,7 @@ function App() {
   async function handleOpenProject() {
     try {
       if (!('showDirectoryPicker' in window)) {
-        alert('当前浏览器不支持 File System Access API，请使用 Chrome/Edge 86+');
+        alert(t('status.browserNotSupported'));
         return;
       }
 
@@ -139,12 +136,12 @@ function App() {
         }
       }
 
-      setStatusMessage('资源包已加载，可直接拖拽组件到画布');
+      setStatusMessage(t('status.resourcePackLoaded'));
     } catch (error: unknown) {
       const typedError = error as { name?: string };
       if (typedError.name !== 'AbortError') {
         console.error(error);
-        setStatusMessage('资源包加载失败，请检查目录结构');
+        setStatusMessage(t('status.loadFailed'));
       }
     } finally {
       setLoading(false);
@@ -173,7 +170,7 @@ function App() {
     anchor.download = activeFile;
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatusMessage(`已导出 ${activeFile}`);
+    setStatusMessage(t('status.exported', { file: activeFile }));
   }
 
   async function handleSave() {
@@ -182,10 +179,10 @@ function App() {
     try {
       setSaving(true);
       await saveUiFile(project.dirHandle, activeFile, jsonPreview);
-      setStatusMessage(`已保存到资源包: ${activeFile}`);
+      setStatusMessage(t('status.saved', { file: activeFile }));
     } catch (error) {
       console.error(error);
-      alert('保存失败，请确认目录权限是否允许写入');
+      alert(t('status.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -209,7 +206,7 @@ function App() {
     );
 
     addElement(type, { parentId, position: nextPosition });
-    setStatusMessage(`已新增 ${ELEMENT_META[type].label}`);
+    setStatusMessage(t('status.added', { type: t(`element.${type}.label`) }));
   }
 
   function handlePaletteClick(type: ElementType) {
@@ -228,8 +225,8 @@ function App() {
     addElement(type, { parentId, position: centeredPosition });
     setStatusMessage(
       parentId
-        ? `已添加到容器 ${insertParentElement?.name || parentId}`
-        : `已添加到根画布`,
+        ? t('status.addedToContainer', { name: insertParentElement?.name || parentId })
+        : t('status.addedToRoot'),
     );
   }
 
@@ -274,7 +271,7 @@ function App() {
 
   const insertTargetLabel = insertParentElement
     ? `${insertParentElement.name} (${insertParentElement.type})`
-    : 'root canvas';
+    : t('sidebar.rootCanvas');
 
   return (
     <div className="flex h-screen w-full select-none bg-zinc-950 text-zinc-300">
@@ -282,7 +279,7 @@ function App() {
         <div className="border-b border-zinc-800 p-4">
           <h1 className="flex items-center gap-2 text-xl font-bold text-zinc-100">
             <LayoutDashboard className="h-5 w-5" />
-            Json UI Editor
+            {t('app.title')}
           </h1>
         </div>
 
@@ -294,13 +291,13 @@ function App() {
               className="flex w-full items-center justify-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
             >
               <FolderOpen className="h-4 w-4" />
-              {loading ? 'Loading...' : 'Open Resource Pack'}
+              {loading ? t('btn.loading') : t('btn.openResourcePack')}
             </button>
 
             {project && (
               <div>
                 <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  UI Files
+                  {t('sidebar.uiFiles')}
                 </h2>
                 <ul className="space-y-1 text-sm">
                   {project.uiFiles.map((file) => (
@@ -327,10 +324,10 @@ function App() {
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Components
+                  {t('sidebar.components')}
                 </h2>
                 <span className="text-[10px] text-zinc-600">
-                  target: {insertTargetLabel}
+                  {t('sidebar.target', { label: insertTargetLabel })}
                 </span>
               </div>
 
@@ -355,10 +352,10 @@ function App() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm text-zinc-200">
-                        {ELEMENT_META[type].label}
+                        {t(`element.${type}.label`)}
                       </div>
                       <div className="truncate text-[11px] text-zinc-500">
-                        {ELEMENT_META[type].description}
+                        {t(`element.${type}.desc`)}
                       </div>
                     </div>
                   </button>
@@ -366,14 +363,14 @@ function App() {
               </div>
 
               <p className="mt-2 text-[10px] leading-4 text-zinc-600">
-                点击会添加到当前选中容器；拖到画布或某个容器，可按落点创建。
+                {t('sidebar.dragHint')}
               </p>
             </div>
 
             {elementCount > 0 && (
               <div>
                 <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Elements ({elementCount})
+                  {t('sidebar.elements', { count: elementCount })}
                 </h2>
                 <ul className="space-y-1">{renderElementTree(elements)}</ul>
               </div>
@@ -394,14 +391,16 @@ function App() {
         >
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">
-              {activeFile || 'No file selected'}
+              {activeFile || t('header.noFileSelected')}
             </span>
             {currentNamespace && (
               <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
                 ns: {currentNamespace}
               </span>
             )}
-            <span className="text-xs text-zinc-500">{elementCount} elements</span>
+            <span className="text-xs text-zinc-500">
+              {t('header.elements', { count: elementCount })}
+            </span>
             {statusMessage && (
               <span className="text-xs text-emerald-400">{statusMessage}</span>
             )}
@@ -409,11 +408,18 @@ function App() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+              className="flex items-center gap-1.5 rounded bg-zinc-800 px-2.5 py-1.5 text-xs transition-colors hover:bg-zinc-700"
+            >
+              <Languages className="h-3.5 w-3.5" />
+              {locale === 'zh' ? 'EN' : '中文'}
+            </button>
+            <button
               onClick={() => setShowPreview(true)}
               disabled={!activeFile}
               className="rounded bg-zinc-800 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-700 disabled:opacity-40"
             >
-              Preview
+              {t('btn.preview')}
             </button>
             <button
               onClick={handleSave}
@@ -421,7 +427,7 @@ function App() {
               className="flex items-center gap-2 rounded bg-emerald-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
             >
               <Save className="h-4 w-4" />
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? t('btn.saving') : t('btn.save')}
             </button>
             <button
               onClick={handleExport}
@@ -429,7 +435,7 @@ function App() {
               className="flex items-center gap-2 rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
             >
               <Download className="h-4 w-4" />
-              Export
+              {t('btn.export')}
             </button>
           </div>
         </header>
@@ -468,9 +474,9 @@ function App() {
           ) : (
             <div className="flex flex-col items-center gap-3 text-zinc-600">
               <FolderOpen className="h-16 w-16 opacity-20" />
-              <p className="text-lg">Open a resource pack to get started</p>
+              <p className="text-lg">{t('sidebar.openHint')}</p>
               <p className="text-sm text-zinc-700">
-                点击左侧按钮加载资源包后，即可从组件库拖拽新增控件
+                {t('sidebar.openHintSub')}
               </p>
             </div>
           )}
@@ -481,7 +487,7 @@ function App() {
         <div className="border-b border-zinc-800 p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
             <Settings className="h-4 w-4" />
-            Properties
+            {t('props.title')}
           </h2>
         </div>
 
@@ -489,13 +495,13 @@ function App() {
           {!selectedElement ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center text-zinc-500">
               <MousePointer2 className="h-8 w-8 opacity-20" />
-              <p>Select an element to edit</p>
+              <p>{t('props.selectHint')}</p>
             </div>
           ) : (
             <>
               <div className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-950/60 px-3 py-2">
                 <div>
-                  <p className="text-xs text-zinc-500">Selected</p>
+                  <p className="text-xs text-zinc-500">{t('props.selected')}</p>
                   <p className="text-sm text-zinc-200">{selectedElement.name}</p>
                 </div>
                 <button
@@ -508,7 +514,7 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">Name (ID)</label>
+                <label className="text-xs text-zinc-400">{t('props.name')}</label>
                 <input
                   type="text"
                   value={selectedElement.name}
@@ -520,7 +526,7 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">Type</label>
+                <label className="text-xs text-zinc-400">{t('props.type')}</label>
                 <select
                   value={selectedElement.type}
                   onChange={(event) =>
@@ -541,7 +547,7 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">Inherits From</label>
+                <label className="text-xs text-zinc-400">{t('props.inheritsFrom')}</label>
                 <input
                   type="text"
                   value={selectedElement.inheritsFrom || ''}
@@ -556,7 +562,7 @@ function App() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Anchor From</label>
+                  <label className="text-xs text-zinc-400">{t('props.anchorFrom')}</label>
                   <select
                     value={selectedElement.anchor_from || 'top_left'}
                     onChange={(event) =>
@@ -574,7 +580,7 @@ function App() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Anchor To</label>
+                  <label className="text-xs text-zinc-400">{t('props.anchorTo')}</label>
                   <select
                     value={selectedElement.anchor_to || 'top_left'}
                     onChange={(event) =>
@@ -594,7 +600,7 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">Layer</label>
+                <label className="text-xs text-zinc-400">{t('props.layer')}</label>
                 <input
                   type="number"
                   value={selectedElement.layer ?? 1}
@@ -609,7 +615,7 @@ function App() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Size X</label>
+                  <label className="text-xs text-zinc-400">{t('props.sizeX')}</label>
                   <input
                     type="number"
                     value={selectedElement.size[0]}
@@ -622,7 +628,7 @@ function App() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Size Y</label>
+                  <label className="text-xs text-zinc-400">{t('props.sizeY')}</label>
                   <input
                     type="number"
                     value={selectedElement.size[1]}
@@ -638,7 +644,7 @@ function App() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Offset X</label>
+                  <label className="text-xs text-zinc-400">{t('props.offsetX')}</label>
                   <input
                     type="number"
                     value={selectedElement.offset[0]}
@@ -654,7 +660,7 @@ function App() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Offset Y</label>
+                  <label className="text-xs text-zinc-400">{t('props.offsetY')}</label>
                   <input
                     type="number"
                     value={selectedElement.offset[1]}
@@ -674,7 +680,7 @@ function App() {
               {selectedElement.type === 'label' && (
                 <>
                   <div className="space-y-2">
-                    <label className="text-xs text-zinc-400">Text</label>
+                    <label className="text-xs text-zinc-400">{t('props.text')}</label>
                     <input
                       type="text"
                       value={selectedElement.text || ''}
@@ -689,7 +695,7 @@ function App() {
 
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs text-zinc-400">Color R</label>
+                      <label className="text-xs text-zinc-400">{t('props.colorR')}</label>
                       <input
                         type="number"
                         min="0"
@@ -709,7 +715,7 @@ function App() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs text-zinc-400">Color G</label>
+                      <label className="text-xs text-zinc-400">{t('props.colorG')}</label>
                       <input
                         type="number"
                         min="0"
@@ -729,7 +735,7 @@ function App() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs text-zinc-400">Color B</label>
+                      <label className="text-xs text-zinc-400">{t('props.colorB')}</label>
                       <input
                         type="number"
                         min="0"
@@ -755,7 +761,7 @@ function App() {
               {(selectedElement.type === 'collection_panel' ||
                 selectedElement.type === 'chest_grid_item') && (
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Collection Name</label>
+                  <label className="text-xs text-zinc-400">{t('props.collectionName')}</label>
                   <input
                     type="text"
                     value={selectedElement.collection_name || ''}
@@ -771,7 +777,7 @@ function App() {
 
               {selectedElement.type === 'chest_grid_item' && (
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">Collection Index</label>
+                  <label className="text-xs text-zinc-400">{t('props.collectionIndex')}</label>
                   <input
                     type="number"
                     value={selectedElement.collection_index ?? 0}
@@ -788,7 +794,7 @@ function App() {
               {selectedElement.type === 'image' && (
                 <>
                   <div className="space-y-2">
-                    <label className="text-xs text-zinc-400">Texture Path</label>
+                    <label className="text-xs text-zinc-400">{t('props.texturePath')}</label>
                     <input
                       type="text"
                       value={selectedElement.texture || ''}
@@ -803,12 +809,12 @@ function App() {
 
                   <div className="mt-4 border-t border-zinc-800 pt-4">
                     <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                      UV Cropping
+                      {t('props.uvCropping')}
                     </h3>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">UV X</label>
+                        <label className="text-xs text-zinc-400">{t('props.uvX')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv?.[0] ?? 0}
@@ -824,7 +830,7 @@ function App() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">UV Y</label>
+                        <label className="text-xs text-zinc-400">{t('props.uvY')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv?.[1] ?? 0}
@@ -843,7 +849,7 @@ function App() {
 
                     <div className="mt-3 grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">UV Width</label>
+                        <label className="text-xs text-zinc-400">{t('props.uvWidth')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv_size?.[0] ?? 0}
@@ -859,7 +865,7 @@ function App() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">UV Height</label>
+                        <label className="text-xs text-zinc-400">{t('props.uvHeight')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv_size?.[1] ?? 0}
@@ -893,7 +899,7 @@ function App() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-              <h3 className="text-lg font-semibold text-zinc-100">JSON Preview</h3>
+              <h3 className="text-lg font-semibold text-zinc-100">{t('props.jsonPreview')}</h3>
               <button
                 onClick={() => setShowPreview(false)}
                 className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
@@ -913,13 +919,13 @@ function App() {
                 onClick={() => setShowPreview(false)}
                 className="rounded bg-zinc-800 px-4 py-2 text-sm transition-colors hover:bg-zinc-700"
               >
-                Close
+                {t('btn.close')}
               </button>
               <button
                 onClick={() => navigator.clipboard.writeText(jsonPreview)}
                 className="rounded bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-500"
               >
-                Copy to Clipboard
+                {t('btn.copyToClipboard')}
               </button>
             </div>
           </div>

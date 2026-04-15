@@ -1,4 +1,25 @@
-export type ElementType = 'panel' | 'image' | 'label' | 'collection_panel' | 'chest_grid_item' | 'factory' | 'grid';
+export type ElementType =
+  | 'panel'
+  | 'image'
+  | 'label'
+  | 'collection_panel'
+  | 'chest_grid_item'
+  | 'factory'
+  | 'grid'
+  | 'button'
+  | 'toggle'
+  | 'dropdown'
+  | 'slider'
+  | 'slider_box'
+  | 'edit_box'
+  | 'input_panel'
+  | 'stack_panel'
+  | 'scroll_view'
+  | 'scrollbar_track'
+  | 'scrollbar_box'
+  | 'screen'
+  | 'custom'
+  | 'selection_wheel';
 
 export interface ParsedControl {
   key: string;
@@ -21,10 +42,20 @@ export interface ParsedControl {
   keep_ratio?: boolean;
   fill?: boolean;
   bilinear?: boolean;
+  grayscale?: boolean;
+  nineslice_size?: number | [number, number, number, number];
+  tiled?: boolean | string;
+  tiled_scale?: [number, number];
+  clip_direction?: string;
+  clip_ratio?: number;
+  clip_pixelperfect?: boolean;
+  texture_file_system?: string;
+  base_size?: [number, number];
   collection_index?: number;
   collection_name?: string;
   visible?: boolean;
   propagate_alpha?: boolean;
+  orientation?: string;
   modifications?: ParsedModification[];
   controls?: ParsedControl[];
 }
@@ -94,10 +125,44 @@ function parseControl(rawKey: string, rawValue: Record<string, unknown>): Parsed
   if (typeof rawValue.keep_ratio === 'boolean') ctrl.keep_ratio = rawValue.keep_ratio;
   if (typeof rawValue.fill === 'boolean') ctrl.fill = rawValue.fill;
   if (typeof rawValue.bilinear === 'boolean') ctrl.bilinear = rawValue.bilinear;
+  if (typeof rawValue.grayscale === 'boolean') ctrl.grayscale = rawValue.grayscale;
+  if (typeof rawValue.nineslice_size === 'number') {
+    ctrl.nineslice_size = rawValue.nineslice_size;
+  } else if (Array.isArray(rawValue.nineslice_size)) {
+    if (rawValue.nineslice_size.length >= 4) {
+      ctrl.nineslice_size = [
+        Number(rawValue.nineslice_size[0]),
+        Number(rawValue.nineslice_size[1]),
+        Number(rawValue.nineslice_size[2]),
+        Number(rawValue.nineslice_size[3]),
+      ];
+    } else if (rawValue.nineslice_size.length >= 2) {
+      // [horizontal, vertical] → [left, top, right, bottom]
+      const h = Number(rawValue.nineslice_size[0]);
+      const v = Number(rawValue.nineslice_size[1]);
+      ctrl.nineslice_size = [h, v, h, v];
+    } else if (rawValue.nineslice_size.length === 1) {
+      ctrl.nineslice_size = Number(rawValue.nineslice_size[0]);
+    }
+  }
+  if (typeof rawValue.tiled === 'boolean' || typeof rawValue.tiled === 'string') {
+    ctrl.tiled = rawValue.tiled;
+  }
+  if (Array.isArray(rawValue.tiled_scale) && rawValue.tiled_scale.length >= 2) {
+    ctrl.tiled_scale = [Number(rawValue.tiled_scale[0]), Number(rawValue.tiled_scale[1])];
+  }
+  if (typeof rawValue.clip_direction === 'string') ctrl.clip_direction = rawValue.clip_direction;
+  if (typeof rawValue.clip_ratio === 'number') ctrl.clip_ratio = rawValue.clip_ratio;
+  if (typeof rawValue.clip_pixelperfect === 'boolean') ctrl.clip_pixelperfect = rawValue.clip_pixelperfect;
+  if (typeof rawValue.texture_file_system === 'string') ctrl.texture_file_system = rawValue.texture_file_system;
+  if (Array.isArray(rawValue.base_size) && rawValue.base_size.length >= 2) {
+    ctrl.base_size = [Number(rawValue.base_size[0]), Number(rawValue.base_size[1])];
+  }
   if (typeof rawValue.collection_index === 'number') ctrl.collection_index = rawValue.collection_index;
   if (typeof rawValue.collection_name === 'string') ctrl.collection_name = rawValue.collection_name;
   if (typeof rawValue.visible === 'boolean') ctrl.visible = rawValue.visible;
   if (typeof rawValue.propagate_alpha === 'boolean') ctrl.propagate_alpha = rawValue.propagate_alpha;
+  if (typeof rawValue.orientation === 'string') ctrl.orientation = rawValue.orientation;
 
   if (Array.isArray(rawValue.modifications)) {
     ctrl.modifications = rawValue.modifications
