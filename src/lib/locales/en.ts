@@ -12,6 +12,10 @@ export const en: Record<string, string> = {
   'btn.close': 'Close',
   'btn.copyToClipboard': 'Copy to Clipboard',
   'btn.toggleRightSidebar': 'Toggle Right Sidebar',
+  'btn.switchToLight': 'Switch to Light Mode',
+  'btn.switchToDark': 'Switch to Dark Mode',
+  'btn.lightMode': 'Light',
+  'btn.darkMode': 'Dark',
 
   // Sidebar
   'sidebar.uiFiles': 'UI Files',

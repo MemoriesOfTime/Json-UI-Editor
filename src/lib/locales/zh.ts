@@ -12,6 +12,10 @@ export const zh: Record<string, string> = {
   'btn.close': '关闭',
   'btn.copyToClipboard': '复制到剪贴板',
   'btn.toggleRightSidebar': '切换右侧属性栏',
+  'btn.switchToLight': '切换到亮色模式',
+  'btn.switchToDark': '切换到暗色模式',
+  'btn.lightMode': '亮色',
+  'btn.darkMode': '暗色',
 
   // 侧边栏
   'sidebar.uiFiles': 'UI 文件',

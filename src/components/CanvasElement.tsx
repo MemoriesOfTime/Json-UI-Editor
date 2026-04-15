@@ -230,7 +230,7 @@ export function CanvasElement({
       }
 
       return (
-        <div className="absolute inset-0 flex items-center justify-center border border-dashed border-zinc-700 bg-zinc-800">
+        <div className="absolute inset-0 flex items-center justify-center border border-dashed border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800">
           <ImageIcon className="h-6 w-6 opacity-30" />
         </div>
       );
@@ -253,7 +253,7 @@ export function CanvasElement({
 
     if (el.type === 'chest_grid_item') {
       return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center border border-zinc-600 bg-black/40 text-xs">
+        <div className="absolute inset-0 flex flex-col items-center justify-center border border-zinc-300 bg-black/20 text-xs dark:border-zinc-600 dark:bg-black/40">
           <span className="opacity-50">{el.collection_index}</span>
         </div>
       );
@@ -263,9 +263,9 @@ export function CanvasElement({
         el.type === 'input_panel' || el.type === 'screen') {
       const typeLabel = el.type !== 'panel' ? el.type : null;
       return (
-        <div className="absolute inset-0 border border-dashed border-zinc-700 bg-zinc-800/30">
+        <div className="absolute inset-0 border border-dashed border-zinc-300 bg-zinc-100/30 dark:border-zinc-700 dark:bg-zinc-800/30">
           {typeLabel && (
-            <span className="absolute left-1 top-0.5 text-[9px] text-zinc-600">
+            <span className="absolute left-1 top-0.5 text-[9px] text-zinc-400 dark:text-zinc-600">
               {typeLabel}
             </span>
           )}
@@ -276,8 +276,8 @@ export function CanvasElement({
     if (el.type === 'stack_panel') {
       const isHorizontal = el.orientation === 'horizontal';
       return (
-        <div className="absolute inset-0 border border-dashed border-teal-800 bg-teal-900/20">
-          <span className="absolute left-1 top-0.5 text-[9px] text-teal-600">
+        <div className="absolute inset-0 border border-dashed border-teal-300 bg-teal-100/20 dark:border-teal-800 dark:bg-teal-900/20">
+          <span className="absolute left-1 top-0.5 text-[9px] text-teal-500 dark:text-teal-600">
             stack_panel ({isHorizontal ? 'H' : 'V'})
           </span>
         </div>
@@ -286,8 +286,8 @@ export function CanvasElement({
 
     if (el.type === 'scroll_view') {
       return (
-        <div className="absolute inset-0 border border-dashed border-indigo-800 bg-indigo-900/20">
-          <span className="absolute left-1 top-0.5 text-[9px] text-indigo-600">
+        <div className="absolute inset-0 border border-dashed border-indigo-300 bg-indigo-100/20 dark:border-indigo-800 dark:bg-indigo-900/20">
+          <span className="absolute left-1 top-0.5 text-[9px] text-indigo-500 dark:text-indigo-600">
             scroll_view
           </span>
         </div>
@@ -296,8 +296,8 @@ export function CanvasElement({
 
     if (el.type === 'button' || el.type === 'toggle' || el.type === 'dropdown') {
       return (
-        <div className="absolute inset-0 border border-solid border-zinc-600 bg-zinc-700/40">
-          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-400">
+        <div className="absolute inset-0 border border-solid border-zinc-300 bg-zinc-200/40 dark:border-zinc-600 dark:bg-zinc-700/40">
+          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-500 dark:text-zinc-400">
             {el.type}
           </span>
         </div>
@@ -307,8 +307,8 @@ export function CanvasElement({
     if (el.type === 'slider' || el.type === 'slider_box' ||
         el.type === 'edit_box' || el.type === 'scrollbar_track' || el.type === 'scrollbar_box') {
       return (
-        <div className="absolute inset-0 border border-solid border-zinc-600 bg-zinc-800/40">
-          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-500">
+        <div className="absolute inset-0 border border-solid border-zinc-300 bg-zinc-100/40 dark:border-zinc-600 dark:bg-zinc-800/40">
+          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-400 dark:text-zinc-500">
             {el.type}
           </span>
         </div>
@@ -317,16 +317,16 @@ export function CanvasElement({
 
     if (el.type === 'factory' || el.type === 'grid') {
       return (
-        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-zinc-600 bg-zinc-800/20">
-          <span className="text-[9px] text-zinc-600">{el.type}</span>
+        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-zinc-300 bg-zinc-100/20 dark:border-zinc-600 dark:bg-zinc-800/20">
+          <span className="text-[9px] text-zinc-400 dark:text-zinc-600">{el.type}</span>
         </div>
       );
     }
 
     if (el.type === 'custom' || el.type === 'selection_wheel') {
       return (
-        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-amber-800 bg-amber-900/20">
-          <span className="text-[9px] text-amber-600">{el.type}</span>
+        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-amber-300 bg-amber-100/20 dark:border-amber-800 dark:bg-amber-900/20">
+          <span className="text-[9px] text-amber-500 dark:text-amber-600">{el.type}</span>
         </div>
       );
     }
@@ -368,7 +368,7 @@ export function CanvasElement({
       }}
       bounds="parent"
       className={`absolute ${
-        isSelected ? 'ring-2 ring-blue-500' : 'hover:ring-1 hover:ring-zinc-600'
+        isSelected ? 'ring-2 ring-blue-500' : 'hover:ring-1 hover:ring-zinc-300 dark:hover:ring-zinc-600'
       }`}
       style={{ zIndex: el.layer ?? 1 }}
       onClick={(event: MouseEvent<HTMLDivElement>) => {

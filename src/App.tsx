@@ -6,10 +6,12 @@ import {
   Languages,
   LayoutDashboard,
   Layers,
+  Moon,
   MousePointer2,
   Plus,
   Save,
   Settings,
+  Sun,
   Trash2,
   X,
 } from 'lucide-react';
@@ -24,6 +26,7 @@ import {
   saveUiFile,
 } from './lib/loadResourcePack';
 import { serializeUiFile } from './lib/serializeUiFile';
+import { useThemeStore } from './lib/theme';
 import {
   ADDABLE_ELEMENT_TYPES,
   ANCHOR_OPTIONS,
@@ -82,6 +85,8 @@ function App() {
   const t = useT();
   const locale = useI18nStore((s) => s.locale);
   const setLocale = useI18nStore((s) => s.setLocale);
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
   const [showPreview, setShowPreview] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
@@ -257,13 +262,13 @@ function App() {
           className={`flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs transition-colors ${
             selectedId === element.id
               ? 'bg-blue-600/20 text-blue-400'
-              : 'hover:bg-zinc-800'
+              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
           style={{ paddingLeft: `${depth * 14 + 12}px` }}
         >
           <Layers className="h-3 w-3 opacity-70" />
           <span className="min-w-0 flex-1 truncate">{element.name}</span>
-          <span className="text-[10px] text-zinc-600">{element.type}</span>
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{element.type}</span>
         </button>
         {element.children.length > 0 && (
           <ul className="space-y-1">{renderElementTree(element.children, depth + 1)}</ul>
@@ -277,10 +282,10 @@ function App() {
     : t('sidebar.rootCanvas');
 
   return (
-    <div className="flex h-screen w-full select-none bg-zinc-950 text-zinc-300">
-      <aside className="flex w-72 flex-col border-r border-zinc-800 bg-zinc-900/50">
-        <div className="border-b border-zinc-800 p-4">
-          <h1 className="flex items-center gap-2 text-xl font-bold text-zinc-100">
+    <div className="flex h-screen w-full select-none bg-zinc-100 text-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+      <aside className="flex w-72 flex-col border-r border-zinc-200 bg-white/50 dark:border-zinc-800 dark:bg-zinc-900/50">
+        <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">
+          <h1 className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">
             <LayoutDashboard className="h-5 w-5" />
             {t('app.title')}
           </h1>
@@ -299,7 +304,7 @@ function App() {
 
             {project && (
               <div>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                   {t('sidebar.uiFiles')}
                 </h2>
                 <ul className="space-y-1 text-sm">
@@ -310,12 +315,12 @@ function App() {
                       className={`flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 ${
                         activeFile === file.name
                           ? 'bg-blue-600/20 font-medium text-blue-400'
-                          : 'hover:bg-zinc-800'
+                          : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
                       }`}
                     >
                       <Layers className="h-3 w-3 opacity-70" />
                       <span className="truncate">{file.name}</span>
-                      <span className="ml-auto text-[10px] text-zinc-500">
+                      <span className="ml-auto text-[10px] text-zinc-400 dark:text-zinc-500">
                         {file.parsed.namespace}
                       </span>
                     </li>
@@ -326,10 +331,10 @@ function App() {
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                   {t('sidebar.components')}
                 </h2>
-                <span className="text-[10px] text-zinc-600">
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-600">
                   {t('sidebar.target', { label: insertTargetLabel })}
                 </span>
               </div>
@@ -348,16 +353,16 @@ function App() {
                       setDraggingType(type);
                     }}
                     onDragEnd={() => setDraggingType(null)}
-                    className="flex w-full items-center gap-3 rounded border border-zinc-800 bg-zinc-900 px-3 py-2 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex w-full items-center gap-3 rounded border border-zinc-200 bg-white px-3 py-2 text-left transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
                   >
-                    <div className="rounded bg-zinc-800 p-1.5 text-blue-400">
+                    <div className="rounded bg-zinc-100 p-1.5 text-blue-400 dark:bg-zinc-800">
                       <Plus className="h-3.5 w-3.5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm text-zinc-200">
+                      <div className="truncate text-sm text-zinc-800 dark:text-zinc-200">
                         {t(`element.${type}.label`)}
                       </div>
-                      <div className="truncate text-[11px] text-zinc-500">
+                      <div className="truncate text-[11px] text-zinc-400 dark:text-zinc-500">
                         {t(`element.${type}.desc`)}
                       </div>
                     </div>
@@ -365,14 +370,14 @@ function App() {
                 ))}
               </div>
 
-              <p className="mt-2 text-[10px] leading-4 text-zinc-600">
+              <p className="mt-2 text-[10px] leading-4 text-zinc-400 dark:text-zinc-600">
                 {t('sidebar.dragHint')}
               </p>
             </div>
 
             {elementCount > 0 && (
               <div>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                   {t('sidebar.elements', { count: elementCount })}
                 </h2>
                 <ul className="space-y-1">{renderElementTree(elements)}</ul>
@@ -393,7 +398,7 @@ function App() {
             e.stopPropagation();
             setIsRightSidebarOpen(!isRightSidebarOpen);
           }}
-          className="absolute right-0 top-1/2 z-50 flex h-16 w-5 -translate-y-1/2 items-center justify-center rounded-l-md border border-r-0 border-zinc-800 bg-zinc-900/90 text-zinc-500 shadow-md backdrop-blur transition-all hover:bg-zinc-800 hover:text-zinc-300"
+          className="absolute right-0 top-1/2 z-50 flex h-16 w-5 -translate-y-1/2 items-center justify-center rounded-l-md border border-r-0 border-zinc-200 bg-white/90 text-zinc-400 shadow-md backdrop-blur transition-all hover:bg-zinc-50 hover:text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/90 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
           title={t('btn.toggleRightSidebar')}
         >
           {isRightSidebarOpen ? (
@@ -404,7 +409,7 @@ function App() {
         </button>
 
         <header
-          className="flex h-14 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-4"
+          className="flex h-14 items-center justify-between border-b border-zinc-200 bg-white/50 px-4 dark:border-zinc-800 dark:bg-zinc-900/50"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex items-center gap-4">
@@ -412,22 +417,34 @@ function App() {
               {activeFile || t('header.noFileSelected')}
             </span>
             {currentNamespace && (
-              <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
+              <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                 ns: {currentNamespace}
               </span>
             )}
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">
               {t('header.elements', { count: elementCount })}
             </span>
             {statusMessage && (
-              <span className="text-xs text-emerald-400">{statusMessage}</span>
+              <span className="text-xs text-emerald-500 dark:text-emerald-400">{statusMessage}</span>
             )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
+              onClick={toggleTheme}
+              className="flex items-center gap-1.5 rounded bg-zinc-100 px-2.5 py-1.5 text-xs transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+              title={theme === 'dark' ? t('btn.switchToLight') : t('btn.switchToDark')}
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-3.5 w-3.5" />
+              ) : (
+                <Moon className="h-3.5 w-3.5" />
+              )}
+              {theme === 'dark' ? t('btn.lightMode') : t('btn.darkMode')}
+            </button>
+            <button
               onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
-              className="flex items-center gap-1.5 rounded bg-zinc-800 px-2.5 py-1.5 text-xs transition-colors hover:bg-zinc-700"
+              className="flex items-center gap-1.5 rounded bg-zinc-100 px-2.5 py-1.5 text-xs transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
             >
               <Languages className="h-3.5 w-3.5" />
               {locale === 'zh' ? 'EN' : '中文'}
@@ -435,7 +452,7 @@ function App() {
             <button
               onClick={() => setShowPreview(true)}
               disabled={!activeFile}
-              className="rounded bg-zinc-800 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-700 disabled:opacity-40"
+              className="rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 disabled:opacity-40 dark:bg-zinc-800 dark:hover:bg-zinc-700"
             >
               {t('btn.preview')}
             </button>
@@ -458,13 +475,13 @@ function App() {
           </div>
         </header>
 
-        <div className="flex flex-1 items-center justify-center overflow-auto bg-zinc-950 p-8">
+        <div className="flex flex-1 items-center justify-center overflow-auto bg-zinc-100 p-8 dark:bg-zinc-950">
           {activeFile ? (
             <div
-              className={`relative overflow-hidden border bg-zinc-900 shadow-2xl transition-colors ${
+              className={`relative overflow-hidden border bg-white shadow-2xl transition-colors dark:bg-zinc-900 ${
                 draggingType
                   ? 'border-emerald-400/60 ring-2 ring-emerald-500/20'
-                  : 'border-zinc-800'
+                  : 'border-zinc-200 dark:border-zinc-800'
               }`}
               style={{ width: canvasSize[0], height: canvasSize[1] }}
               onClick={(event) => event.stopPropagation()}
@@ -490,10 +507,10 @@ function App() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-3 text-zinc-600">
+            <div className="flex flex-col items-center gap-3 text-zinc-400 dark:text-zinc-600">
               <FolderOpen className="h-16 w-16 opacity-20" />
               <p className="text-lg">{t('sidebar.openHint')}</p>
-              <p className="text-sm text-zinc-700">
+              <p className="text-sm text-zinc-300 dark:text-zinc-700">
                 {t('sidebar.openHintSub')}
               </p>
             </div>
@@ -502,13 +519,13 @@ function App() {
       </main>
 
       <aside
-        className={`flex flex-col overflow-hidden border-zinc-800 bg-zinc-900/50 transition-all duration-300 ${
+        className={`flex flex-col overflow-hidden border-zinc-200 bg-white/50 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900/50 ${
           isRightSidebarOpen ? 'w-80 border-l' : 'w-0 border-l-0'
         }`}
       >
         <div className="flex h-full w-80 flex-col">
-          <div className="border-b border-zinc-800 p-4">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+          <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               <Settings className="h-4 w-4" />
               {t('props.title')}
             </h2>
@@ -516,40 +533,40 @@ function App() {
 
           <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
           {!selectedElement ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-center text-zinc-500">
+            <div className="flex flex-col items-center gap-2 py-8 text-center text-zinc-400 dark:text-zinc-500">
               <MousePointer2 className="h-8 w-8 opacity-20" />
               <p>{t('props.selectHint')}</p>
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+              <div className="flex items-center justify-between rounded border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950/60">
                 <div>
-                  <p className="text-xs text-zinc-500">{t('props.selected')}</p>
-                  <p className="text-sm text-zinc-200">{selectedElement.name}</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500">{t('props.selected')}</p>
+                  <p className="text-sm text-zinc-800 dark:text-zinc-200">{selectedElement.name}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => removeElement(selectedElement.id)}
-                  className="rounded p-2 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400"
+                  className="rounded p-2 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-red-400 dark:text-zinc-500 dark:hover:bg-zinc-800"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">{t('props.name')}</label>
+                <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.name')}</label>
                 <input
                   type="text"
                   value={selectedElement.name}
                   onChange={(event) =>
                     updateElement(selectedElement.id, { name: event.target.value })
                   }
-                  className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-zinc-200"
+                  className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">{t('props.type')}</label>
+                <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.type')}</label>
                 <select
                   value={selectedElement.type}
                   onChange={(event) =>
@@ -557,7 +574,7 @@ function App() {
                       type: event.target.value as ElementType,
                     })
                   }
-                  className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-zinc-200"
+                  className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                 >
                   <option value="panel">panel</option>
                   <option value="image">image</option>
@@ -570,7 +587,7 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">{t('props.inheritsFrom')}</label>
+                <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.inheritsFrom')}</label>
                 <input
                   type="text"
                   value={selectedElement.inheritsFrom || ''}
@@ -579,13 +596,13 @@ function App() {
                       inheritsFrom: event.target.value || undefined,
                     })
                   }
-                  className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200"
+                  className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.anchorFrom')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.anchorFrom')}</label>
                   <select
                     value={selectedElement.anchor_from || 'top_left'}
                     onChange={(event) =>
@@ -593,7 +610,7 @@ function App() {
                         anchor_from: event.target.value as UIElement['anchor_from'],
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-zinc-200"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                   >
                     {ANCHOR_OPTIONS.map((anchor) => (
                       <option key={anchor} value={anchor}>
@@ -603,7 +620,7 @@ function App() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.anchorTo')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.anchorTo')}</label>
                   <select
                     value={selectedElement.anchor_to || 'top_left'}
                     onChange={(event) =>
@@ -611,7 +628,7 @@ function App() {
                         anchor_to: event.target.value as UIElement['anchor_to'],
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-zinc-200"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                   >
                     {ANCHOR_OPTIONS.map((anchor) => (
                       <option key={anchor} value={anchor}>
@@ -623,7 +640,7 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs text-zinc-400">{t('props.layer')}</label>
+                <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.layer')}</label>
                 <input
                   type="number"
                   value={selectedElement.layer ?? 1}
@@ -632,13 +649,13 @@ function App() {
                       layer: Number(event.target.value),
                     })
                   }
-                  className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                  className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.sizeX')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.sizeX')}</label>
                   <input
                     type="number"
                     value={selectedElement.size[0]}
@@ -647,11 +664,11 @@ function App() {
                         size: [Number(event.target.value), selectedElement.size[1]],
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.sizeY')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.sizeY')}</label>
                   <input
                     type="number"
                     value={selectedElement.size[1]}
@@ -660,14 +677,14 @@ function App() {
                         size: [selectedElement.size[0], Number(event.target.value)],
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.offsetX')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.offsetX')}</label>
                   <input
                     type="number"
                     value={selectedElement.offset[0]}
@@ -679,11 +696,11 @@ function App() {
                         ],
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.offsetY')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.offsetY')}</label>
                   <input
                     type="number"
                     value={selectedElement.offset[1]}
@@ -695,7 +712,7 @@ function App() {
                         ],
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
               </div>
@@ -703,7 +720,7 @@ function App() {
               {selectedElement.type === 'label' && (
                 <>
                   <div className="space-y-2">
-                    <label className="text-xs text-zinc-400">{t('props.text')}</label>
+                    <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.text')}</label>
                     <input
                       type="text"
                       value={selectedElement.text || ''}
@@ -712,13 +729,13 @@ function App() {
                           text: event.target.value,
                         })
                       }
-                      className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                      className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                     />
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs text-zinc-400">{t('props.colorR')}</label>
+                      <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.colorR')}</label>
                       <input
                         type="number"
                         min="0"
@@ -734,11 +751,11 @@ function App() {
                             ],
                           })
                         }
-                        className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                        className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs text-zinc-400">{t('props.colorG')}</label>
+                      <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.colorG')}</label>
                       <input
                         type="number"
                         min="0"
@@ -754,11 +771,11 @@ function App() {
                             ],
                           })
                         }
-                        className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                        className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs text-zinc-400">{t('props.colorB')}</label>
+                      <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.colorB')}</label>
                       <input
                         type="number"
                         min="0"
@@ -774,7 +791,7 @@ function App() {
                             ],
                           })
                         }
-                        className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                        className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                       />
                     </div>
                   </div>
@@ -784,7 +801,7 @@ function App() {
               {(selectedElement.type === 'collection_panel' ||
                 selectedElement.type === 'chest_grid_item') && (
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.collectionName')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.collectionName')}</label>
                   <input
                     type="text"
                     value={selectedElement.collection_name || ''}
@@ -793,14 +810,14 @@ function App() {
                         collection_name: event.target.value,
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
               )}
 
               {selectedElement.type === 'chest_grid_item' && (
                 <div className="space-y-2">
-                  <label className="text-xs text-zinc-400">{t('props.collectionIndex')}</label>
+                  <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.collectionIndex')}</label>
                   <input
                     type="number"
                     value={selectedElement.collection_index ?? 0}
@@ -809,7 +826,7 @@ function App() {
                         collection_index: Number(event.target.value),
                       })
                     }
-                    className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
               )}
@@ -817,7 +834,7 @@ function App() {
               {selectedElement.type === 'image' && (
                 <>
                   <div className="space-y-2">
-                    <label className="text-xs text-zinc-400">{t('props.texturePath')}</label>
+                    <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.texturePath')}</label>
                     <input
                       type="text"
                       value={selectedElement.texture || ''}
@@ -826,18 +843,18 @@ function App() {
                           texture: event.target.value,
                         })
                       }
-                      className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs"
+                      className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs dark:border-zinc-800 dark:bg-zinc-950"
                     />
                   </div>
 
-                  <div className="mt-4 border-t border-zinc-800 pt-4">
-                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       {t('props.uvCropping')}
                     </h3>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">{t('props.uvX')}</label>
+                        <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.uvX')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv?.[0] ?? 0}
@@ -849,11 +866,11 @@ function App() {
                               ],
                             })
                           }
-                          className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                          className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">{t('props.uvY')}</label>
+                        <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.uvY')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv?.[1] ?? 0}
@@ -865,14 +882,14 @@ function App() {
                               ],
                             })
                           }
-                          className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                          className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                         />
                       </div>
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">{t('props.uvWidth')}</label>
+                        <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.uvWidth')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv_size?.[0] ?? 0}
@@ -884,11 +901,11 @@ function App() {
                               ],
                             })
                           }
-                          className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                          className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">{t('props.uvHeight')}</label>
+                        <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.uvHeight')}</label>
                         <input
                           type="number"
                           value={selectedElement.uv_size?.[1] ?? 0}
@@ -900,7 +917,7 @@ function App() {
                               ],
                             })
                           }
-                          className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5"
+                          className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 dark:border-zinc-800 dark:bg-zinc-950"
                         />
                       </div>
                     </div>
@@ -915,33 +932,33 @@ function App() {
 
       {showPreview && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-8"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-8 dark:bg-black/80"
           onClick={() => setShowPreview(false)}
         >
           <div
-            className="flex max-h-full w-full max-w-3xl flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+            className="flex max-h-full w-full max-w-3xl flex-col rounded-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-              <h3 className="text-lg font-semibold text-zinc-100">{t('props.jsonPreview')}</h3>
+            <div className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{t('props.jsonPreview')}</h3>
               <button
                 onClick={() => setShowPreview(false)}
-                className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="flex-1 overflow-auto p-4">
-              <pre className="whitespace-pre-wrap font-mono text-sm text-zinc-300">
+              <pre className="whitespace-pre-wrap font-mono text-sm text-zinc-700 dark:text-zinc-300">
                 {jsonPreview}
               </pre>
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-zinc-800 p-4">
+            <div className="flex justify-end gap-2 border-t border-zinc-200 p-4 dark:border-zinc-800">
               <button
                 onClick={() => setShowPreview(false)}
-                className="rounded bg-zinc-800 px-4 py-2 text-sm transition-colors hover:bg-zinc-700"
+                className="rounded bg-zinc-100 px-4 py-2 text-sm transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
               >
                 {t('btn.close')}
               </button>
