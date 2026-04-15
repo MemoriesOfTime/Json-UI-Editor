@@ -51,6 +51,12 @@ export function CanvasElement({
         .find(Boolean)
     : undefined;
   const [isDropTargetActive, setIsDropTargetActive] = useState(false);
+
+  const uvX = el.uv?.[0] ?? 0;
+  const uvY = el.uv?.[1] ?? 0;
+  const uvW = el.uv_size?.[0] ?? textureAsset?.naturalWidth ?? 0;
+  const uvH = el.uv_size?.[1] ?? textureAsset?.naturalHeight ?? 0;
+
   const displayPosition = applyAnchor(
     el.anchor_from,
     el.anchor_to,
@@ -172,15 +178,24 @@ export function CanvasElement({
           );
         }
 
-        // 标准 UV 渲染
-        const uvX = el.uv?.[0] ?? 0;
-        const uvY = el.uv?.[1] ?? 0;
-        const uvW = el.uv_size?.[0] ?? textureAsset.naturalWidth;
-        const uvH = el.uv_size?.[1] ?? textureAsset.naturalHeight;
+        // 标准 UV 渲染：
+        // 当 uv_size 超出纹理实际边界时，按可用源区域裁剪后再拉伸到目标尺寸。
+        const sourceUvW = Math.max(
+          0,
+          Math.min(uvW, textureAsset.naturalWidth - uvX),
+        );
+        const sourceUvH = Math.max(
+          0,
+          Math.min(uvH, textureAsset.naturalHeight - uvY),
+        );
+        if (sourceUvW <= 0 || sourceUvH <= 0) {
+          return colorOverlay;
+        }
+
         const keepRatio = el.keep_ratio === true;
         const fill = el.fill === true;
-        const scaleXRaw = uvW > 0 ? el.size[0] / uvW : 1;
-        const scaleYRaw = uvH > 0 ? el.size[1] / uvH : 1;
+        const scaleXRaw = el.size[0] / sourceUvW;
+        const scaleYRaw = el.size[1] / sourceUvH;
         const uniformScale = keepRatio
           ? fill
             ? Math.max(scaleXRaw, scaleYRaw)
@@ -188,8 +203,8 @@ export function CanvasElement({
           : null;
         const scaleX = uniformScale ?? scaleXRaw;
         const scaleY = uniformScale ?? scaleYRaw;
-        const sourceWidth = uvW * scaleX;
-        const sourceHeight = uvH * scaleY;
+        const sourceWidth = sourceUvW * scaleX;
+        const sourceHeight = sourceUvH * scaleY;
         const offsetX = keepRatio ? (el.size[0] - sourceWidth) / 2 : 0;
         const offsetY = keepRatio ? (el.size[1] - sourceHeight) / 2 : 0;
 

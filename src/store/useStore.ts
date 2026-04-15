@@ -260,6 +260,12 @@ function persistDraft(
   };
 }
 
+function revokeTextureMap(textureMap: Record<string, TextureAsset>) {
+  for (const asset of Object.values(textureMap)) {
+    URL.revokeObjectURL(asset.objectUrl);
+  }
+}
+
 function controlToElement(
   ctrl: ParsedControl,
   parentSize: [number, number],
@@ -595,13 +601,17 @@ export const useStore = create<EditorState>((set) => ({
   textureMap: {},
   setProject: (project) => {
     idCounter = 0;
-    set({
-      project,
-      activeFile: null,
-      elements: [],
-      drafts: {},
-      selectedId: null,
-      canvasSize: [320, 240] as [number, number],
+    set((state) => {
+      revokeTextureMap(state.textureMap);
+      return {
+        project,
+        activeFile: null,
+        elements: [],
+        drafts: {},
+        selectedId: null,
+        canvasSize: [320, 240] as [number, number],
+        textureMap: {},
+      };
     });
   },
   setActiveFile: (fileName) => {
