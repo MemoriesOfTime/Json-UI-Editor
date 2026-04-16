@@ -80,6 +80,8 @@ export const en: Record<string, string> = {
   // Status messages
   'status.resourcePackLoaded':
     'Resource pack loaded, drag components to canvas',
+  'status.resourcePackLoadedWithWarnings':
+    'Resource pack loaded, skipped {count} unreadable files',
   'status.loadFailed':
     'Failed to load resource pack, check directory structure',
   'status.browserNotSupported':

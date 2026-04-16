@@ -79,6 +79,7 @@ export const zh: Record<string, string> = {
 
   // 状态消息
   'status.resourcePackLoaded': '资源包已加载，可直接拖拽组件到画布',
+  'status.resourcePackLoadedWithWarnings': '资源包已加载，已跳过 {count} 个无法读取的文件',
   'status.loadFailed': '资源包加载失败，请检查目录结构',
   'status.browserNotSupported':
     '当前浏览器不支持 File System Access API，请使用 Chrome/Edge 86+',

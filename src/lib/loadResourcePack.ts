@@ -1,5 +1,4 @@
 import type { ParsedUiFile, ParsedRoute } from '../lib/parseUiJson';
-import { t } from './i18n';
 import { parseUiJson, parseRoutesFromChestScreen } from '../lib/parseUiJson';
 import type { TextureAsset } from '../store/useStore';
 import { toCanonicalTexturePath } from './texturePath';
@@ -15,6 +14,7 @@ export interface ResourcePackProject {
   uiFiles: ProjectFile[];
   routes: ParsedRoute[];
   texturePaths: string[];
+  skippedFiles: string[];
 }
 
 export async function loadResourcePack(
@@ -22,24 +22,29 @@ export async function loadResourcePack(
 ): Promise<ResourcePackProject> {
   const uiFiles: ProjectFile[] = [];
   const texturePaths: string[] = [];
+  const skippedFiles: string[] = [];
   let routes: ParsedRoute[] = [];
 
   const uiDefs = await readUiDefs(dirHandle);
-  const uiDir = await getSubDir(dirHandle, 'ui');
   const texturesDir = await getSubDir(dirHandle, 'textures');
 
-  if (uiDir && uiDefs.length > 0) {
+  if (uiDefs.length > 0) {
     for (const defPath of uiDefs) {
-      const fileName = defPath.replace('ui/', '');
+      const normalizedPath = normalizeRelativePath(defPath);
       try {
-        const fileHandle = await uiDir.getFileHandle(fileName);
+        const fileHandle = await getFileHandleByRelativePath(
+          dirHandle,
+          normalizedPath,
+        );
         const file = await fileHandle.getFile();
         const text = await file.text();
         const json = JSON.parse(text);
+        const fileName = getBaseName(normalizedPath);
         const parsed = parseUiJson(json, fileName);
-        uiFiles.push({ name: fileName, path: defPath, parsed });
-      } catch {
-        // skip unreadable files
+        uiFiles.push({ name: fileName, path: normalizedPath, parsed });
+      } catch (error) {
+        console.warn(`Failed to load UI file: ${normalizedPath}`, error);
+        skippedFiles.push(normalizedPath);
       }
     }
   }
@@ -53,7 +58,7 @@ export async function loadResourcePack(
     await collectTexturePaths(texturesDir, 'textures', texturePaths);
   }
 
-  return { dirHandle, uiFiles, routes, texturePaths };
+  return { dirHandle, uiFiles, routes, texturePaths, skippedFiles };
 }
 
 async function readUiDefs(dirHandle: FileSystemDirectoryHandle): Promise<string[]> {
@@ -79,6 +84,40 @@ async function getSubDir(
   } catch {
     return null;
   }
+}
+
+function normalizeRelativePath(value: string): string {
+  return value
+    .replace(/\\/g, '/')
+    .replace(/^\.?\//, '')
+    .replace(/\/{2,}/g, '/')
+    .replace(/^\/+/, '');
+}
+
+function getRelativePathParts(relativePath: string): string[] {
+  return normalizeRelativePath(relativePath).split('/').filter(Boolean);
+}
+
+function getBaseName(relativePath: string): string {
+  const parts = getRelativePathParts(relativePath);
+  return parts[parts.length - 1] || relativePath;
+}
+
+async function getFileHandleByRelativePath(
+  rootHandle: FileSystemDirectoryHandle,
+  relativePath: string,
+): Promise<FileSystemFileHandle> {
+  const parts = getRelativePathParts(relativePath);
+  if (parts.length === 0) {
+    throw new Error(`Invalid relative path: ${relativePath}`);
+  }
+
+  let current = rootHandle;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    current = await current.getDirectoryHandle(parts[i]);
+  }
+
+  return current.getFileHandle(parts[parts.length - 1]);
 }
 
 async function collectTexturePaths(
@@ -107,12 +146,7 @@ export async function loadTextureAssets(
 ): Promise<void> {
   for (const path of paths) {
     try {
-      const parts = path.split('/');
-      let current: FileSystemDirectoryHandle = dirHandle;
-      for (let i = 0; i < parts.length - 1; i++) {
-        current = await current.getDirectoryHandle(parts[i]);
-      }
-      const fileHandle = await current.getFileHandle(parts[parts.length - 1]);
+      const fileHandle = await getFileHandleByRelativePath(dirHandle, path);
       const file = await fileHandle.getFile();
       const objectUrl = URL.createObjectURL(file);
       const img = new Image();
@@ -137,15 +171,10 @@ export async function loadTextureAssets(
 
 export async function saveUiFile(
   dirHandle: FileSystemDirectoryHandle,
-  fileName: string,
+  relativePath: string,
   contents: string,
 ): Promise<void> {
-  const uiDir = await getSubDir(dirHandle, 'ui');
-  if (!uiDir) {
-    throw new Error(t('status.uiDirNotFound'));
-  }
-
-  const fileHandle = await uiDir.getFileHandle(fileName);
+  const fileHandle = await getFileHandleByRelativePath(dirHandle, relativePath);
   const writable = await fileHandle.createWritable();
   await writable.write(contents);
   await writable.close();

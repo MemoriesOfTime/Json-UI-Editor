@@ -1,5 +1,5 @@
 import type { ParsedControl, ParsedUiFile } from './parseUiJson';
-import type { UIElement } from '../store/useStore';
+import type { ElementType, UIElement } from '../store/useStore';
 
 function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -25,17 +25,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function serializeElement(el: UIElement): Record<string, unknown> {
-  const baseProps = cloneJson(el.rawProps);
+function hasOwnProp(target: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(target, key);
+}
 
-  if (el.type === 'chest_grid_item') {
-    delete baseProps.type;
-  } else {
-    baseProps.type = el.type;
+function isChestGridItemElement(el: UIElement): boolean {
+  return el.type === 'chest_grid_item' && el.inheritsFrom === 'chest.chest_grid_item';
+}
+
+function getSerializedType(el: UIElement): ElementType | undefined {
+  if (el.dirty?.type) {
+    return el.type === 'chest_grid_item' ? undefined : el.type;
   }
 
-  baseProps.size = el.size;
-  baseProps.offset = el.offset;
+  return el.sourceType;
+}
+
+function serializeElement(el: UIElement): Record<string, unknown> {
+  const baseProps = cloneJson(el.rawProps);
+  const serializedType = getSerializedType(el);
+  const serializesAsChestGridItem = isChestGridItemElement(el);
+
+  if (serializedType === undefined) {
+    delete baseProps.type;
+  } else {
+    baseProps.type = serializedType;
+  }
+
+  if (el.dirty?.size || !hasOwnProp(baseProps, 'size')) {
+    baseProps.size = el.size;
+  }
+  if (el.dirty?.offset || !hasOwnProp(baseProps, 'offset')) {
+    baseProps.offset = el.offset;
+  }
   setOptionalProp(baseProps, 'anchor_from', el.anchor_from);
   setOptionalProp(baseProps, 'anchor_to', el.anchor_to);
   setOptionalProp(baseProps, 'layer', el.layer);
@@ -68,11 +90,15 @@ function serializeElement(el: UIElement): Record<string, unknown> {
 
   if (el.type === 'collection_panel') {
     setOptionalProp(baseProps, 'collection_name', el.collection_name);
+  } else if (el.dirty?.type && !serializesAsChestGridItem) {
+    delete baseProps.collection_name;
   }
 
-  if (el.type === 'chest_grid_item') {
+  if (serializesAsChestGridItem) {
     baseProps.collection_index = el.collection_index ?? 0;
     setOptionalProp(baseProps, 'collection_name', el.collection_name);
+  } else {
+    delete baseProps.collection_index;
   }
 
   if (el.children.length > 0) {
@@ -96,7 +122,6 @@ function findEditableRoot(parsed: ParsedUiFile): ParsedControl | null {
 export function serializeUiFile(
   parsed: ParsedUiFile,
   elements: UIElement[],
-  canvasSize: [number, number],
 ): string {
   const nextJson = cloneJson(parsed.rawJson);
   const editableRoot = findEditableRoot(parsed);
@@ -107,7 +132,6 @@ export function serializeUiFile(
       ? { ...(nextJson[rootKey] as Record<string, unknown>) }
       : cloneJson(editableRoot.rawProps);
 
-    rootBase.size = canvasSize;
     rootBase.controls = elements.map(serializeElement);
     nextJson[rootKey] = rootBase;
   } else {

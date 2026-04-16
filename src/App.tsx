@@ -32,10 +32,12 @@ import { useThemeStore } from './lib/theme';
 import {
   ADDABLE_ELEMENT_TYPES,
   ANCHOR_OPTIONS,
+  ELEMENT_TYPE_OPTIONS,
   findElementById,
   findParentIdByChildId,
   flattenElements,
   getDefaultElementSize,
+  getNextCollectionIndex,
   isContainerElement,
   useStore,
 } from './store/useStore';
@@ -104,10 +106,10 @@ function App() {
   const selectedElement = findElementById(elements, selectedId);
   const insertParentId = getInsertParentId(elements, selectedId);
   const insertParentElement = findElementById(elements, insertParentId);
-  const currentFile = project?.uiFiles.find((file) => file.name === activeFile) || null;
+  const currentFile = project?.uiFiles.find((file) => file.path === activeFile) || null;
   const currentNamespace = currentFile?.parsed.namespace || '';
   const jsonPreview = currentFile
-    ? serializeUiFile(currentFile.parsed, elements, canvasSize)
+    ? serializeUiFile(currentFile.parsed, elements)
     : '';
   const elementCount = flattenElements(elements).length;
 
@@ -142,11 +144,17 @@ function App() {
             file.name !== 'chest_screen.json' && file.name !== '_ui_defs.json',
         );
         if (firstScreen) {
-          setActiveFile(firstScreen.name);
+          setActiveFile(firstScreen.path);
         }
       }
 
-      setStatusMessage(t('status.resourcePackLoaded'));
+      setStatusMessage(
+        loadedProject.skippedFiles.length > 0
+          ? t('status.resourcePackLoadedWithWarnings', {
+              count: loadedProject.skippedFiles.length,
+            })
+          : t('status.resourcePackLoaded'),
+      );
     } catch (error: unknown) {
       const typedError = error as { name?: string };
       if (typedError.name !== 'AbortError') {
@@ -170,26 +178,55 @@ function App() {
     updateElement(id, { size, offset });
   }
 
+  function getTypeChangeUpdates(
+    element: UIElement,
+    nextType: ElementType,
+  ): Partial<UIElement> {
+    const updates: Partial<UIElement> = { type: nextType };
+
+    if (nextType === 'chest_grid_item') {
+      updates.inheritsFrom = 'chest.chest_grid_item';
+      updates.collection_name = element.collection_name || 'container_items';
+      updates.collection_index =
+        element.collection_index ?? getNextCollectionIndex(elements);
+      return updates;
+    }
+
+    if (nextType === 'collection_panel' && !element.collection_name) {
+      updates.collection_name = 'container_items';
+    }
+
+    if (element.inheritsFrom === 'chest.chest_grid_item') {
+      updates.inheritsFrom = undefined;
+      updates.collection_index = undefined;
+      if (nextType !== 'collection_panel') {
+        updates.collection_name = undefined;
+      }
+    }
+
+    return updates;
+  }
+
   function handleExport() {
-    if (!activeFile) return;
+    if (!currentFile) return;
 
     const blob = new Blob([jsonPreview], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = activeFile;
+    anchor.download = currentFile.name;
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatusMessage(t('status.exported', { file: activeFile }));
+    setStatusMessage(t('status.exported', { file: currentFile.path }));
   }
 
   async function handleSave() {
-    if (!project || !activeFile) return;
+    if (!project || !currentFile) return;
 
     try {
       setSaving(true);
-      await saveUiFile(project.dirHandle, activeFile, jsonPreview);
-      setStatusMessage(t('status.saved', { file: activeFile }));
+      await saveUiFile(project.dirHandle, currentFile.path, jsonPreview);
+      setStatusMessage(t('status.saved', { file: currentFile.path }));
     } catch (error) {
       console.error(error);
       alert(t('status.saveFailed'));
@@ -287,10 +324,11 @@ function App() {
                 <ul className="space-y-1 text-sm">
                   {project.uiFiles.map((file) => (
                     <li
-                      key={file.name}
-                      onClick={() => setActiveFile(file.name)}
+                      key={file.path}
+                      onClick={() => setActiveFile(file.path)}
+                      title={file.path}
                       className={`flex cursor-pointer items-center gap-2 rounded px-3 py-1.5 ${
-                        activeFile === file.name
+                        activeFile === file.path
                           ? 'bg-blue-600/20 font-medium text-blue-400'
                           : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
                       }`}
@@ -396,7 +434,7 @@ function App() {
         >
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">
-              {activeFile || t('header.noFileSelected')}
+              {currentFile?.path || t('header.noFileSelected')}
             </span>
             {currentNamespace && (
               <span className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
@@ -433,14 +471,14 @@ function App() {
             </button>
             <button
               onClick={() => setShowPreview(true)}
-              disabled={!activeFile}
+              disabled={!currentFile}
               className="rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 disabled:opacity-40 dark:bg-zinc-800 dark:hover:bg-zinc-700"
             >
               {t('btn.preview')}
             </button>
             <button
               onClick={handleSave}
-              disabled={!activeFile || saving}
+              disabled={!currentFile || saving}
               className="flex items-center gap-2 rounded bg-emerald-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
             >
               <Save className="h-4 w-4" />
@@ -448,7 +486,7 @@ function App() {
             </button>
             <button
               onClick={handleExport}
-              disabled={!activeFile}
+              disabled={!currentFile}
               className="flex items-center gap-2 rounded bg-blue-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
             >
               <Download className="h-4 w-4" />
@@ -458,7 +496,7 @@ function App() {
         </header>
 
         <div className="flex flex-1 items-center justify-center overflow-auto bg-zinc-100 p-8 dark:bg-zinc-950">
-          {activeFile ? (
+          {currentFile ? (
             <div
               className={`relative overflow-hidden border bg-white shadow-2xl transition-colors dark:bg-zinc-900 ${
                 draggingType
@@ -552,19 +590,21 @@ function App() {
                 <select
                   value={selectedElement.type}
                   onChange={(event) =>
-                    updateElement(selectedElement.id, {
-                      type: event.target.value as ElementType,
-                    })
+                    updateElement(
+                      selectedElement.id,
+                      getTypeChangeUpdates(
+                        selectedElement,
+                        event.target.value as ElementType,
+                      ),
+                    )
                   }
                   className="w-full rounded border border-zinc-200 bg-white px-3 py-1.5 text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
                 >
-                  <option value="panel">panel</option>
-                  <option value="image">image</option>
-                  <option value="label">label</option>
-                  <option value="collection_panel">collection_panel</option>
-                  <option value="chest_grid_item">chest_grid_item</option>
-                  <option value="factory">factory</option>
-                  <option value="grid">grid</option>
+                  {ELEMENT_TYPE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
                 </select>
               </div>
 

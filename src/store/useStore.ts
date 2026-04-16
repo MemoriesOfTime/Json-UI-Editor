@@ -39,9 +39,11 @@ export type AnchorType =
 export interface UIElement {
   id: string;
   type: ElementType;
+  sourceType?: ElementType;
   name: string;
   inheritsFrom?: string;
   rawProps: Record<string, unknown>;
+  dirty?: ElementDirty;
   size: [number, number];
   offset: [number, number];
   anchor_from?: AnchorType;
@@ -87,6 +89,12 @@ interface AddElementOptions {
   position?: [number, number];
 }
 
+export interface ElementDirty {
+  size?: boolean;
+  offset?: boolean;
+  type?: boolean;
+}
+
 interface EditorState {
   project: ResourcePackProject | null;
   activeFile: string | null;
@@ -96,7 +104,7 @@ interface EditorState {
   selectedId: string | null;
   textureMap: Record<string, TextureAsset>;
   setProject: (project: ResourcePackProject) => void;
-  setActiveFile: (fileName: string) => void;
+  setActiveFile: (filePath: string) => void;
   setElements: (elements: UIElement[]) => void;
   selectElement: (id: string | null) => void;
   updateElement: (id: string, updates: Partial<UIElement>) => void;
@@ -124,6 +132,30 @@ export const ADDABLE_ELEMENT_TYPES: ElementType[] = [
   'label',
   'collection_panel',
   'chest_grid_item',
+];
+
+export const ELEMENT_TYPE_OPTIONS: ElementType[] = [
+  'panel',
+  'image',
+  'label',
+  'collection_panel',
+  'chest_grid_item',
+  'factory',
+  'grid',
+  'button',
+  'toggle',
+  'dropdown',
+  'slider',
+  'slider_box',
+  'edit_box',
+  'input_panel',
+  'stack_panel',
+  'scroll_view',
+  'scrollbar_track',
+  'scrollbar_box',
+  'screen',
+  'custom',
+  'selection_wheel',
 ];
 
 const CONTAINER_TYPES = new Set<ElementType>([
@@ -266,6 +298,20 @@ function revokeTextureMap(textureMap: Record<string, TextureAsset>) {
   }
 }
 
+function isImplicitChestGridItemControl(ctrl: ParsedControl): boolean {
+  return (
+    ctrl.inheritsFrom === 'chest.chest_grid_item' ||
+    ctrl.collection_index !== undefined
+  );
+}
+
+function getDisplayType(ctrl: ParsedControl): ElementType {
+  if (ctrl.type) return ctrl.type;
+  if (isImplicitChestGridItemControl(ctrl)) return 'chest_grid_item';
+  if (ctrl.inheritsFrom) return 'custom';
+  return 'panel';
+}
+
 function controlToElement(
   ctrl: ParsedControl,
   parentSize: [number, number],
@@ -285,7 +331,8 @@ function controlToElement(
 
   const el: UIElement = {
     id: nextId(),
-    type: ctrl.type || (ctrl.inheritsFrom ? 'chest_grid_item' : 'panel'),
+    type: getDisplayType(ctrl),
+    sourceType: ctrl.type,
     name: ctrl.key,
     rawProps: { ...ctrl.rawProps },
     size: resolvedSize,
@@ -370,7 +417,23 @@ function updateElementInTree(
 ): UIElement[] {
   return elements.map((el) => {
     if (el.id === id) {
-      return { ...el, ...updates };
+      const dirtyUpdates: ElementDirty = {};
+      if (Object.prototype.hasOwnProperty.call(updates, 'size')) {
+        dirtyUpdates.size = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'offset')) {
+        dirtyUpdates.offset = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(updates, 'type')) {
+        dirtyUpdates.type = true;
+      }
+
+      const hasDirtyUpdates = Object.keys(dirtyUpdates).length > 0;
+      return {
+        ...el,
+        ...updates,
+        dirty: hasDirtyUpdates ? { ...el.dirty, ...dirtyUpdates } : el.dirty,
+      };
     }
     if (el.children.length === 0) {
       return el;
@@ -447,7 +510,7 @@ function getNextUniqueName(elements: UIElement[], prefix: string): string {
   return candidate;
 }
 
-function getNextCollectionIndex(elements: UIElement[]): number {
+export function getNextCollectionIndex(elements: UIElement[]): number {
   const usedIndexes = new Set(
     flattenElements(elements)
       .filter((el) => el.type === 'chest_grid_item')
@@ -479,6 +542,7 @@ function createElementTemplate(
   const base: UIElement = {
     id: nextId(),
     type,
+    sourceType: type === 'chest_grid_item' ? undefined : type,
     name: getNextUniqueName(elements, type === 'chest_grid_item' ? 'slot' : type),
     rawProps: {},
     size,
@@ -614,21 +678,21 @@ export const useStore = create<EditorState>((set) => ({
       };
     });
   },
-  setActiveFile: (fileName) => {
+  setActiveFile: (filePath) => {
     set((state) => {
       if (!state.project) {
         return {
-          activeFile: fileName,
+          activeFile: filePath,
           elements: [],
           selectedId: null,
           canvasSize: [320, 240] as [number, number],
         };
       }
 
-      const file = state.project.uiFiles.find((entry) => entry.name === fileName);
+      const file = state.project.uiFiles.find((entry) => entry.path === filePath);
       if (!file) {
         return {
-          activeFile: fileName,
+          activeFile: filePath,
           elements: [],
           selectedId: null,
           canvasSize: [320, 240] as [number, number],
@@ -646,9 +710,9 @@ export const useStore = create<EditorState>((set) => ({
       ];
       const controls = mainRoot ? mainRoot.controls || [] : file.parsed.rootControls;
       const elements =
-        state.drafts[fileName] || parsedControlsToElements(controls, canvasSize);
+        state.drafts[filePath] || parsedControlsToElements(controls, canvasSize);
 
-      return { activeFile: fileName, elements, selectedId: null, canvasSize };
+      return { activeFile: filePath, elements, selectedId: null, canvasSize };
     });
   },
   setElements: (elements) =>
