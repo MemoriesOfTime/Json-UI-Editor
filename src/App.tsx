@@ -1,6 +1,8 @@
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Download,
   FolderOpen,
   Image as ImageIcon,
@@ -94,6 +96,9 @@ const VIEWPORT_PRESETS: Array<{
   { value: '3840x2160', label: '4K 3840×2160', size: [3840, 2160] },
 ];
 
+const EDITOR_STAGE_GAP = 16;
+const MIN_EDITOR_ZOOM_SCALE = 0.01;
+
 function getViewportPresetValue(viewportSize: [number, number]): string {
   const preset = VIEWPORT_PRESETS.find(
     ({ size }) => size[0] === viewportSize[0] && size[1] === viewportSize[1],
@@ -125,6 +130,7 @@ function App() {
 
   const [showPreview, setShowPreview] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [isEditorToolbarCollapsed, setIsEditorToolbarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draggingType, setDraggingType] = useState<ElementType | null>(null);
@@ -134,8 +140,15 @@ function App() {
   const [canvasBackgroundOpacity, setCanvasBackgroundOpacity] = useState(0.72);
   const [viewportSize, setViewportSize] = useState<[number, number]>([1920, 1080]);
   const [uiScalePercent, setUiScalePercent] = useState(100);
+  const [editorZoomPercent, setEditorZoomPercent] = useState(100);
+  const [isEditorZoomAuto, setIsEditorZoomAuto] = useState(true);
+  const [editorToolbarHeight, setEditorToolbarHeight] = useState(0);
+  const [editorViewportBounds, setEditorViewportBounds] =
+    useState<[number, number]>([1920, 1080]);
   const backgroundInputRef = useRef<HTMLInputElement | null>(null);
   const backgroundLoadVersionRef = useRef(0);
+  const editorCanvasAreaRef = useRef<HTMLDivElement | null>(null);
+  const editorToolbarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -149,6 +162,59 @@ function App() {
     },
     [canvasBackground],
   );
+
+  useEffect(() => {
+    const area = editorCanvasAreaRef.current;
+    if (!area) return;
+
+    const measureBounds = () => {
+      const currentArea = editorCanvasAreaRef.current;
+      if (!currentArea) return;
+
+      const style = window.getComputedStyle(currentArea);
+      const horizontalPadding =
+        parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const verticalPadding =
+        parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const toolbarHeight = editorToolbarRef.current?.offsetHeight ?? 0;
+      const availableWidth = Math.max(
+        0,
+        currentArea.clientWidth - horizontalPadding,
+      );
+      const availableHeight = Math.max(
+        0,
+        currentArea.clientHeight - verticalPadding - toolbarHeight - EDITOR_STAGE_GAP,
+      );
+
+      setEditorToolbarHeight(toolbarHeight);
+      setEditorViewportBounds([availableWidth, availableHeight]);
+    };
+
+    measureBounds();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measureBounds);
+      return () => {
+        window.removeEventListener('resize', measureBounds);
+      };
+    }
+
+    const observer = new ResizeObserver(() => {
+      measureBounds();
+    });
+    observer.observe(area);
+
+    if (editorToolbarRef.current) {
+      observer.observe(editorToolbarRef.current);
+    }
+
+    window.addEventListener('resize', measureBounds);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measureBounds);
+    };
+  }, [activeFile, project]);
 
   const currentFile = project?.uiFiles.find((file) => file.path === activeFile) || null;
   const editableRoot = currentFile?.parsed.rootControls.find(
@@ -184,9 +250,30 @@ function App() {
     viewportSize[1] / Math.max(logicalCanvasSize[1], 1),
   );
   const renderScale = fitViewportScale * (uiScalePercent / 100);
+  const autoEditorZoomScale = (() => {
+    const widthScale =
+      editorViewportBounds[0] / Math.max(viewportSize[0], 1);
+    const heightScale =
+      editorViewportBounds[1] / Math.max(viewportSize[1], 1);
+    const nextScale = Math.min(widthScale, heightScale);
+    if (!Number.isFinite(nextScale)) {
+      return 1;
+    }
+
+    return Math.max(nextScale, MIN_EDITOR_ZOOM_SCALE);
+  })();
+  const editorZoomScale = isEditorZoomAuto
+    ? autoEditorZoomScale
+    : editorZoomPercent / 100;
+  const displayedEditorZoomPercent = Math.round(editorZoomScale * 100);
+  const totalCanvasScale = renderScale * editorZoomScale;
   const scaledCanvasSize: [number, number] = [
     logicalCanvasSize[0] * renderScale,
     logicalCanvasSize[1] * renderScale,
+  ];
+  const scaledViewportSize: [number, number] = [
+    viewportSize[0] * editorZoomScale,
+    viewportSize[1] * editorZoomScale,
   ];
   const canvasDisplayOffset: [number, number] = [
     Math.max(0, (viewportSize[0] - scaledCanvasSize[0]) / 2),
@@ -372,8 +459,8 @@ function App() {
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
     createElementAt(droppedType, null, [
-      Math.round((event.clientX - rect.left) / renderScale),
-      Math.round((event.clientY - rect.top) / renderScale),
+      Math.round((event.clientX - rect.left) / totalCanvasScale),
+      Math.round((event.clientY - rect.top) / totalCanvasScale),
     ]);
     setDraggingType(null);
   }
@@ -458,6 +545,24 @@ function App() {
     }
 
     setUiScalePercent(Math.round(nextValue));
+  }
+
+  function handleEditorZoomChange(rawValue: string) {
+    const nextValue = Number(rawValue);
+    if (!Number.isFinite(nextValue) || nextValue <= 0 || nextValue > 500) {
+      return;
+    }
+
+    setEditorZoomPercent(Math.round(nextValue));
+  }
+
+  function handleEditorZoomAutoToggle() {
+    setIsEditorZoomAuto((current) => {
+      if (current) {
+        setEditorZoomPercent(displayedEditorZoomPercent);
+      }
+      return !current;
+    });
   }
 
 
@@ -663,220 +768,308 @@ function App() {
           </div>
         </header>
 
-        <div className="flex flex-1 overflow-auto bg-zinc-100 p-8 dark:bg-zinc-950">
-          {currentFile ? (
-            <div className="mx-auto flex min-h-full flex-col items-center justify-center gap-4">
+        <div className="relative flex flex-1 flex-col overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+          {currentFile && (
+            <div
+              ref={editorToolbarRef}
+              className="absolute left-0 right-0 top-0 z-20 flex justify-center pointer-events-none"
+            >
               <div
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90"
+                className="pointer-events-auto flex max-w-full flex-col items-center"
                 onClick={(event) => event.stopPropagation()}
               >
-                <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  <span>{t('canvas.viewportSize')}</span>
-                  <select
-                    value={viewportPresetValue}
-                    onChange={(event) =>
-                      handleViewportPresetChange(event.target.value)
-                    }
-                    className="rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
-                  >
-                    <option value="custom">{t('canvas.customViewport')}</option>
-                    {VIEWPORT_PRESETS.map((preset) => (
-                      <option key={preset.value} value={preset.value}>
-                        {preset.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min="1"
-                    value={viewportSize[0]}
-                    onChange={(event) =>
-                      handleViewportSizeChange(0, event.target.value)
-                    }
-                    className="w-24 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
-                  />
-                  <span>×</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={viewportSize[1]}
-                    onChange={(event) =>
-                      handleViewportSizeChange(1, event.target.value)
-                    }
-                    className="w-24 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  <span>{t('canvas.guiScale')}</span>
-                  <input
-                    type="number"
-                    min="10"
-                    step="5"
-                    value={uiScalePercent}
-                    onChange={(event) => handleUiScaleChange(event.target.value)}
-                    className="w-20 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
-                  />
-                  <span>%</span>
-                </div>
-
-                <input
-                  ref={backgroundInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleCanvasBackgroundChange}
-                />
-                <button
-                  type="button"
-                  onClick={() => backgroundInputRef.current?.click()}
-                  className="flex items-center gap-2 rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                <div
+                  id="editor-canvas-toolbar"
+                  role="group"
+                  aria-label={t('canvas.toolbarTitle')}
+                  className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                    isEditorToolbarCollapsed
+                      ? 'grid-rows-[0fr] opacity-0'
+                      : 'grid-rows-[1fr] opacity-100'
+                  }`}
                 >
-                  <ImageIcon className="h-4 w-4" />
-                  {t('btn.loadBackground')}
-                </button>
+                  <div className="overflow-hidden min-h-0">
+                    <div className="flex flex-wrap items-center gap-3 rounded-b-xl border border-t-0 border-zinc-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span>{t('canvas.viewportSize')}</span>
+                        <select
+                          value={viewportPresetValue}
+                          onChange={(event) =>
+                            handleViewportPresetChange(event.target.value)
+                          }
+                          className="rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                        >
+                          <option value="custom">{t('canvas.customViewport')}</option>
+                          {VIEWPORT_PRESETS.map((preset) => (
+                            <option key={preset.value} value={preset.value}>
+                              {preset.label}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          value={viewportSize[0]}
+                          onChange={(event) =>
+                            handleViewportSizeChange(0, event.target.value)
+                          }
+                          className="w-24 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                        />
+                        <span>×</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={viewportSize[1]}
+                          onChange={(event) =>
+                            handleViewportSizeChange(1, event.target.value)
+                          }
+                          className="w-24 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                        />
+                      </div>
 
-                {canvasBackground ? (
-                  <>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-zinc-700 dark:text-zinc-200">
-                        {canvasBackground.name}
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span>{t('canvas.guiScale')}</span>
+                        <input
+                          type="number"
+                          min="10"
+                          step="5"
+                          value={uiScalePercent}
+                          onChange={(event) => handleUiScaleChange(event.target.value)}
+                          className="w-20 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                        />
+                        <span>%</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span>{t('canvas.editorZoom')}</span>
+                        <button
+                          type="button"
+                          onClick={handleEditorZoomAutoToggle}
+                          className={`rounded px-2 py-1 transition-colors ${
+                            isEditorZoomAuto
+                              ? 'bg-blue-600 text-white hover:bg-blue-500'
+                              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+                          }`}
+                        >
+                          {t('canvas.editorZoomAuto')}
+                        </button>
+                        <input
+                          type="number"
+                          min="10"
+                          step="5"
+                          value={isEditorZoomAuto ? displayedEditorZoomPercent : editorZoomPercent}
+                          onChange={(event) => handleEditorZoomChange(event.target.value)}
+                          disabled={isEditorZoomAuto}
+                          className="w-20 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                        />
+                        <span>%</span>
+                      </div>
+
+                      <input
+                        ref={backgroundInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleCanvasBackgroundChange}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => backgroundInputRef.current?.click()}
+                        className="flex items-center gap-2 rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        {t('btn.loadBackground')}
+                      </button>
+
+                      {canvasBackground ? (
+                        <>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm text-zinc-700 dark:text-zinc-200">
+                              {canvasBackground.name}
+                            </p>
+                            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                              {canvasBackground.naturalWidth}×{canvasBackground.naturalHeight} ·{' '}
+                              {t('canvas.backgroundHint')}
+                            </p>
+                          </div>
+
+                          <label className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                            <span>{t('canvas.backgroundOpacity')}</span>
+                            <input
+                              type="range"
+                              min="0.15"
+                              max="1"
+                              step="0.05"
+                              value={canvasBackgroundOpacity}
+                              onChange={(event) =>
+                                setCanvasBackgroundOpacity(Number(event.target.value))
+                              }
+                              className="w-28 accent-blue-500"
+                            />
+                            <span>{Math.round(canvasBackgroundOpacity * 100)}%</span>
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={handleClearCanvasBackground}
+                            className="rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                          >
+                            {t('btn.clearBackground')}
+                          </button>
+                        </>
+                      ) : (
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                          {t('canvas.backgroundEmpty')}
+                        </p>
+                      )}
+
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {t('canvas.logicalScreen')}: {logicalCanvasSize[0]}×{logicalCanvasSize[1]}
                       </p>
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                        {canvasBackground.naturalWidth}×{canvasBackground.naturalHeight} ·{' '}
-                        {t('canvas.backgroundHint')}
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {t('canvas.uiRoot')}: {logicalRootSize[0]}×{logicalRootSize[1]}
+                      </p>
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                        {t('canvas.renderScale')}: {renderScale.toFixed(2)}x
                       </p>
                     </div>
+                  </div>
+                </div>
 
-                    <label className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      <span>{t('canvas.backgroundOpacity')}</span>
-                      <input
-                        type="range"
-                        min="0.15"
-                        max="1"
-                        step="0.05"
-                        value={canvasBackgroundOpacity}
-                        onChange={(event) =>
-                          setCanvasBackgroundOpacity(Number(event.target.value))
-                        }
-                        className="w-28 accent-blue-500"
-                      />
-                      <span>{Math.round(canvasBackgroundOpacity * 100)}%</span>
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={handleClearCanvasBackground}
-                      className="rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-                    >
-                      {t('btn.clearBackground')}
-                    </button>
-                  </>
-                ) : (
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                    {t('canvas.backgroundEmpty')}
-                  </p>
-                )}
-
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                  {t('canvas.logicalScreen')}: {logicalCanvasSize[0]}×{logicalCanvasSize[1]}
-                </p>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                  {t('canvas.uiRoot')}: {logicalRootSize[0]}×{logicalRootSize[1]}
-                </p>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                  {t('canvas.renderScale')}: {renderScale.toFixed(2)}x
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsEditorToolbarCollapsed((current) => !current)}
+                  aria-controls="editor-canvas-toolbar"
+                  aria-expanded={!isEditorToolbarCollapsed}
+                  aria-label={
+                    isEditorToolbarCollapsed
+                      ? t('btn.expandCanvasToolbar')
+                      : t('btn.collapseCanvasToolbar')
+                  }
+                  title={
+                    isEditorToolbarCollapsed
+                      ? t('btn.expandCanvasToolbar')
+                      : t('btn.collapseCanvasToolbar')
+                  }
+                  className="z-10 -mt-px flex h-5 w-16 shrink-0 items-center justify-center rounded-b-md border border-t-0 border-zinc-200 bg-white/90 text-zinc-400 shadow-md backdrop-blur transition-all hover:bg-zinc-50 hover:text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/90 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                >
+                  {isEditorToolbarCollapsed ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4" />
+                  )}
+                </button>
               </div>
+            </div>
+          )}
 
-              <div
-                className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-black shadow-2xl dark:border-zinc-800"
-                style={{ width: viewportSize[0], height: viewportSize[1] }}
-              >
-                {canvasBackground ? (
-                  <>
-                    <img
-                      src={canvasBackground.objectUrl}
-                      alt={canvasBackground.name}
-                      className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-                      style={{ opacity: canvasBackgroundOpacity }}
-                      draggable={false}
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-black/10" />
-                  </>
-                ) : (
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_transparent_42%),linear-gradient(180deg,_rgba(39,39,42,0.92),_rgba(9,9,11,1))]" />
-                )}
-
-                <div className="pointer-events-none absolute inset-0 border border-white/10" />
-
+          <div
+            ref={editorCanvasAreaRef}
+            className="flex flex-1 overflow-auto p-8"
+          >
+            {currentFile ? (
+              <div className="mx-auto flex min-h-full w-fit flex-col items-center justify-start gap-4">
                 <div
-                  className="absolute"
+                  className="flex flex-col items-center gap-8"
                   style={{
-                    left: canvasDisplayOffset[0],
-                    top: canvasDisplayOffset[1],
-                    width: scaledCanvasSize[0],
-                    height: scaledCanvasSize[1],
+                    paddingTop: editorToolbarHeight + EDITOR_STAGE_GAP,
                   }}
                 >
                   <div
-                    className="absolute left-0 top-0"
-                    style={{
-                      width: logicalCanvasSize[0],
-                      height: logicalCanvasSize[1],
-                      transform: `scale(${renderScale})`,
-                      transformOrigin: 'top left',
-                    }}
+                    className="relative"
+                    style={{ width: scaledViewportSize[0], height: scaledViewportSize[1] }}
                   >
-                    <div className="pointer-events-none absolute inset-0 border border-dashed border-white/15" />
-
                     <div
-                      className={`absolute overflow-hidden border bg-white/8 shadow-2xl transition-colors dark:bg-zinc-900/20 ${
-                        draggingType
-                          ? 'border-emerald-400/70 ring-2 ring-emerald-500/20'
-                          : 'border-white/30'
-                      }`}
+                      className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-black shadow-2xl dark:border-zinc-800"
                       style={{
-                        left: logicalRootPosition[0],
-                        top: logicalRootPosition[1],
-                        width: logicalRootSize[0],
-                        height: logicalRootSize[1],
+                        width: viewportSize[0],
+                        height: viewportSize[1],
+                        transform: `scale(${editorZoomScale})`,
+                        transformOrigin: 'top left',
                       }}
-                      onClick={(event) => event.stopPropagation()}
-                      onDragOver={(event) => {
-                        if (!draggingType) return;
-                        event.preventDefault();
-                        event.dataTransfer.dropEffect = 'copy';
-                      }}
-                      onDrop={handleRootDrop}
                     >
-                      <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/55 px-2 py-1 text-[10px] font-medium tracking-wide text-white">
-                        {t('canvas.uiRoot')} · {logicalRootSize[0]}×{logicalRootSize[1]}
+                      {canvasBackground ? (
+                        <>
+                          <img
+                            src={canvasBackground.objectUrl}
+                            alt={canvasBackground.name}
+                            className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+                            style={{ opacity: canvasBackgroundOpacity }}
+                            draggable={false}
+                          />
+                          <div className="pointer-events-none absolute inset-0 bg-black/10" />
+                        </>
+                      ) : (
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_transparent_42%),linear-gradient(180deg,_rgba(39,39,42,0.92),_rgba(9,9,11,1))]" />
+                      )}
+
+                      <div className="pointer-events-none absolute inset-0 border border-white/10" />
+
+                      <div
+                        className="absolute"
+                        style={{
+                          left: canvasDisplayOffset[0],
+                          top: canvasDisplayOffset[1],
+                          width: scaledCanvasSize[0],
+                          height: scaledCanvasSize[1],
+                        }}
+                      >
+                        <div
+                          className="absolute left-0 top-0"
+                          style={{
+                            width: logicalCanvasSize[0],
+                            height: logicalCanvasSize[1],
+                            transform: `scale(${renderScale})`,
+                            transformOrigin: 'top left',
+                          }}
+                        >
+                          <div className="pointer-events-none absolute inset-0 border border-dashed border-white/15" />
+
+                          <div
+                            className={`absolute overflow-hidden border bg-white/8 shadow-2xl transition-colors dark:bg-zinc-900/20 ${
+                              draggingType
+                                ? 'border-emerald-400/70 ring-2 ring-emerald-500/20'
+                                : 'border-white/30'
+                            }`}
+                            style={{
+                              left: logicalRootPosition[0],
+                              top: logicalRootPosition[1],
+                              width: logicalRootSize[0],
+                              height: logicalRootSize[1],
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            onDragOver={(event) => {
+                              if (!draggingType) return;
+                              event.preventDefault();
+                              event.dataTransfer.dropEffect = 'copy';
+                            }}
+                            onDrop={handleRootDrop}
+                          >
+                            <div className="pointer-events-none absolute inset-0 border border-dashed border-white/25" />
+
+                            {displayElements.map((element) => (
+                              <CanvasElement
+                                key={element.id}
+                                el={element}
+                                parentSize={logicalRootSize}
+                                selectedId={selectedId}
+                                draggingType={draggingType}
+                                canvasScale={totalCanvasScale}
+                                onSelect={selectElement}
+                                onDragStop={handleDragStop}
+                                onResizeStop={handleResizeStop}
+                                onDropNewElement={createElementAt}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="pointer-events-none absolute inset-0 border border-dashed border-white/25" />
-
-                      {displayElements.map((element) => (
-                        <CanvasElement
-                          key={element.id}
-                          el={element}
-                          parentSize={logicalRootSize}
-                          selectedId={selectedId}
-                          draggingType={draggingType}
-                          canvasScale={renderScale}
-                          onSelect={selectElement}
-                          onDragStop={handleDragStop}
-                          onResizeStop={handleResizeStop}
-                          onDropNewElement={createElementAt}
-                        />
-                      ))}
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
           ) : (
-            <div className="flex flex-col items-center gap-3 text-zinc-400 dark:text-zinc-600">
+            <div className="mx-auto flex min-h-full w-full flex-col items-center justify-center gap-3 text-zinc-400 dark:text-zinc-600">
               <FolderOpen className="h-16 w-16 opacity-20" />
               <p className="text-lg">{t('sidebar.openHint')}</p>
               <p className="text-sm text-zinc-300 dark:text-zinc-700">
@@ -885,7 +1078,8 @@ function App() {
             </div>
           )}
         </div>
-      </main>
+      </div>
+    </main>
 
       <aside
         className={`flex flex-col overflow-hidden border-zinc-200 bg-white/50 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900/50 ${
