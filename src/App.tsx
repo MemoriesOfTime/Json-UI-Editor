@@ -3,6 +3,7 @@ import {
   ChevronRight,
   Download,
   FolderOpen,
+  Image as ImageIcon,
   Languages,
   LayoutDashboard,
   Layers,
@@ -15,8 +16,8 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { DragEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { ChangeEvent, DragEvent } from 'react';
 import { CanvasElement, COMPONENT_DRAG_MIME } from './components/CanvasElement';
 import { ElementTreeNode } from './components/ElementTreeNode';
 import { SidebarSection } from './components/SidebarSection';
@@ -33,12 +34,15 @@ import {
   ADDABLE_ELEMENT_TYPES,
   ANCHOR_OPTIONS,
   ELEMENT_TYPE_OPTIONS,
+  applyAnchor,
   findElementById,
   findParentIdByChildId,
   flattenElements,
   getDefaultElementSize,
   getNextCollectionIndex,
   isContainerElement,
+  resolveControlFrame,
+  resolveElementLayoutTree,
   useStore,
 } from './store/useStore';
 import type { ElementType, UIElement } from './store/useStore';
@@ -70,6 +74,33 @@ function getInsertParentId(
   return findParentIdByChildId(elements, selectedId);
 }
 
+interface CanvasBackgroundImage {
+  name: string;
+  objectUrl: string;
+  naturalWidth: number;
+  naturalHeight: number;
+}
+
+const VIEWPORT_PRESETS: Array<{
+  value: string;
+  label: string;
+  size: [number, number];
+}> = [
+  { value: '1280x720', label: 'HD 1280×720', size: [1280, 720] },
+  { value: '1366x768', label: 'WXGA 1366×768', size: [1366, 768] },
+  { value: '1600x900', label: 'HD+ 1600×900', size: [1600, 900] },
+  { value: '1920x1080', label: 'FHD 1920×1080', size: [1920, 1080] },
+  { value: '2560x1440', label: 'QHD 2560×1440', size: [2560, 1440] },
+  { value: '3840x2160', label: '4K 3840×2160', size: [3840, 2160] },
+];
+
+function getViewportPresetValue(viewportSize: [number, number]): string {
+  const preset = VIEWPORT_PRESETS.find(
+    ({ size }) => size[0] === viewportSize[0] && size[1] === viewportSize[1],
+  );
+  return preset?.value ?? 'custom';
+}
+
 function App() {
   const {
     project,
@@ -98,20 +129,75 @@ function App() {
   const [saving, setSaving] = useState(false);
   const [draggingType, setDraggingType] = useState<ElementType | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [canvasBackground, setCanvasBackground] =
+    useState<CanvasBackgroundImage | null>(null);
+  const [canvasBackgroundOpacity, setCanvasBackgroundOpacity] = useState(0.72);
+  const [viewportSize, setViewportSize] = useState<[number, number]>([1920, 1080]);
+  const [uiScalePercent, setUiScalePercent] = useState(100);
+  const backgroundInputRef = useRef<HTMLInputElement | null>(null);
+  const backgroundLoadVersionRef = useRef(0);
 
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  const selectedElement = findElementById(elements, selectedId);
-  const insertParentId = getInsertParentId(elements, selectedId);
-  const insertParentElement = findElementById(elements, insertParentId);
+  useEffect(
+    () => () => {
+      if (canvasBackground?.objectUrl) {
+        URL.revokeObjectURL(canvasBackground.objectUrl);
+      }
+    },
+    [canvasBackground],
+  );
+
   const currentFile = project?.uiFiles.find((file) => file.path === activeFile) || null;
+  const editableRoot = currentFile?.parsed.rootControls.find(
+    (control) =>
+      control.key.endsWith('_menu_root') || control.key.endsWith('_menu_panel'),
+  ) || null;
+  const logicalCanvasSize = canvasSize;
+  const resolvedRootFrame = resolveControlFrame(
+    editableRoot,
+    logicalCanvasSize,
+    logicalCanvasSize,
+  );
+  const logicalRootSize = resolvedRootFrame.size;
+  const displayElements = resolveElementLayoutTree(
+    elements,
+    logicalRootSize,
+    logicalCanvasSize,
+  );
+  const selectedElement = findElementById(displayElements, selectedId);
+  const insertParentId = getInsertParentId(displayElements, selectedId);
+  const insertParentElement = findElementById(displayElements, insertParentId);
+  const logicalRootPosition = applyAnchor(
+    resolvedRootFrame.anchorFrom,
+    resolvedRootFrame.anchorTo,
+    logicalCanvasSize[0],
+    logicalCanvasSize[1],
+    logicalRootSize[0],
+    logicalRootSize[1],
+    resolvedRootFrame.offset,
+  );
+  const fitViewportScale = Math.min(
+    viewportSize[0] / Math.max(logicalCanvasSize[0], 1),
+    viewportSize[1] / Math.max(logicalCanvasSize[1], 1),
+  );
+  const renderScale = fitViewportScale * (uiScalePercent / 100);
+  const scaledCanvasSize: [number, number] = [
+    logicalCanvasSize[0] * renderScale,
+    logicalCanvasSize[1] * renderScale,
+  ];
+  const canvasDisplayOffset: [number, number] = [
+    Math.max(0, (viewportSize[0] - scaledCanvasSize[0]) / 2),
+    Math.max(0, (viewportSize[1] - scaledCanvasSize[1]) / 2),
+  ];
   const currentNamespace = currentFile?.parsed.namespace || '';
   const jsonPreview = currentFile
     ? serializeUiFile(currentFile.parsed, elements)
     : '';
-  const elementCount = flattenElements(elements).length;
+  const elementCount = flattenElements(displayElements).length;
+  const viewportPresetValue = getViewportPresetValue(viewportSize);
 
   async function handleOpenProject() {
     try {
@@ -240,8 +326,8 @@ function App() {
     parentId: string | null,
     dropPosition: [number, number],
   ) {
-    const targetParent = parentId ? findElementById(elements, parentId) : null;
-    const parentSize = targetParent?.size || canvasSize;
+    const targetParent = parentId ? findElementById(displayElements, parentId) : null;
+    const parentSize = targetParent?.size || logicalRootSize;
     const elementSize = getDefaultElementSize(type);
     const nextPosition = clampPosition(
       [
@@ -258,7 +344,7 @@ function App() {
 
   function handlePaletteClick(type: ElementType) {
     const parentId = insertParentId;
-    const parentSize = insertParentElement?.size || canvasSize;
+    const parentSize = insertParentElement?.size || logicalRootSize;
     const elementSize = getDefaultElementSize(type);
     const centeredPosition = clampPosition(
       [
@@ -286,10 +372,92 @@ function App() {
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
     createElementAt(droppedType, null, [
-      Math.round(event.clientX - rect.left),
-      Math.round(event.clientY - rect.top),
+      Math.round((event.clientX - rect.left) / renderScale),
+      Math.round((event.clientY - rect.top) / renderScale),
     ]);
     setDraggingType(null);
+  }
+
+  function handleCanvasBackgroundChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setStatusMessage(t('status.canvasBackgroundLoadFailed'));
+      event.target.value = '';
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const image = new window.Image();
+    const nextLoadVersion = backgroundLoadVersionRef.current + 1;
+    backgroundLoadVersionRef.current = nextLoadVersion;
+
+    image.onload = () => {
+      if (backgroundLoadVersionRef.current !== nextLoadVersion) {
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+
+      setViewportSize([image.naturalWidth, image.naturalHeight]);
+      setCanvasBackground({
+        name: file.name,
+        objectUrl,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+      });
+      setStatusMessage(t('status.canvasBackgroundLoaded', { file: file.name }));
+    };
+
+    image.onerror = () => {
+      if (backgroundLoadVersionRef.current !== nextLoadVersion) {
+        URL.revokeObjectURL(objectUrl);
+        return;
+      }
+
+      URL.revokeObjectURL(objectUrl);
+      setStatusMessage(t('status.canvasBackgroundLoadFailed'));
+    };
+
+    image.src = objectUrl;
+    event.target.value = '';
+  }
+
+  function handleClearCanvasBackground() {
+    backgroundLoadVersionRef.current += 1;
+    setCanvasBackground(null);
+    setStatusMessage(t('status.canvasBackgroundCleared'));
+  }
+
+  function handleViewportSizeChange(axis: 0 | 1, rawValue: string) {
+    const nextValue = Number(rawValue);
+    if (!Number.isFinite(nextValue) || nextValue <= 0) {
+      return;
+    }
+
+    setViewportSize((current) => {
+      const nextSize: [number, number] = [...current] as [number, number];
+      nextSize[axis] = Math.round(nextValue);
+      return nextSize;
+    });
+  }
+
+  function handleViewportPresetChange(value: string) {
+    if (value === 'custom') return;
+
+    const preset = VIEWPORT_PRESETS.find((item) => item.value === value);
+    if (!preset) return;
+
+    setViewportSize([...preset.size] as [number, number]);
+  }
+
+  function handleUiScaleChange(rawValue: string) {
+    const nextValue = Number(rawValue);
+    if (!Number.isFinite(nextValue) || nextValue <= 0) {
+      return;
+    }
+
+    setUiScalePercent(Math.round(nextValue));
   }
 
 
@@ -495,36 +663,217 @@ function App() {
           </div>
         </header>
 
-        <div className="flex flex-1 items-center justify-center overflow-auto bg-zinc-100 p-8 dark:bg-zinc-950">
+        <div className="flex flex-1 overflow-auto bg-zinc-100 p-8 dark:bg-zinc-950">
           {currentFile ? (
-            <div
-              className={`relative overflow-hidden border bg-white shadow-2xl transition-colors dark:bg-zinc-900 ${
-                draggingType
-                  ? 'border-emerald-400/60 ring-2 ring-emerald-500/20'
-                  : 'border-zinc-200 dark:border-zinc-800'
-              }`}
-              style={{ width: canvasSize[0], height: canvasSize[1] }}
-              onClick={(event) => event.stopPropagation()}
-              onDragOver={(event) => {
-                if (!draggingType) return;
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'copy';
-              }}
-              onDrop={handleRootDrop}
-            >
-              {elements.map((element) => (
-                <CanvasElement
-                  key={element.id}
-                  el={element}
-                  parentSize={canvasSize}
-                  selectedId={selectedId}
-                  draggingType={draggingType}
-                  onSelect={selectElement}
-                  onDragStop={handleDragStop}
-                  onResizeStop={handleResizeStop}
-                  onDropNewElement={createElementAt}
+            <div className="mx-auto flex min-h-full flex-col items-center justify-center gap-4">
+              <div
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span>{t('canvas.viewportSize')}</span>
+                  <select
+                    value={viewportPresetValue}
+                    onChange={(event) =>
+                      handleViewportPresetChange(event.target.value)
+                    }
+                    className="rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                  >
+                    <option value="custom">{t('canvas.customViewport')}</option>
+                    {VIEWPORT_PRESETS.map((preset) => (
+                      <option key={preset.value} value={preset.value}>
+                        {preset.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={viewportSize[0]}
+                    onChange={(event) =>
+                      handleViewportSizeChange(0, event.target.value)
+                    }
+                    className="w-24 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                  />
+                  <span>×</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={viewportSize[1]}
+                    onChange={(event) =>
+                      handleViewportSizeChange(1, event.target.value)
+                    }
+                    className="w-24 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span>{t('canvas.guiScale')}</span>
+                  <input
+                    type="number"
+                    min="10"
+                    step="5"
+                    value={uiScalePercent}
+                    onChange={(event) => handleUiScaleChange(event.target.value)}
+                    className="w-20 rounded border border-zinc-200 bg-white px-2 py-1 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200"
+                  />
+                  <span>%</span>
+                </div>
+
+                <input
+                  ref={backgroundInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCanvasBackgroundChange}
                 />
-              ))}
+                <button
+                  type="button"
+                  onClick={() => backgroundInputRef.current?.click()}
+                  className="flex items-center gap-2 rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  {t('btn.loadBackground')}
+                </button>
+
+                {canvasBackground ? (
+                  <>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-zinc-700 dark:text-zinc-200">
+                        {canvasBackground.name}
+                      </p>
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {canvasBackground.naturalWidth}×{canvasBackground.naturalHeight} ·{' '}
+                        {t('canvas.backgroundHint')}
+                      </p>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <span>{t('canvas.backgroundOpacity')}</span>
+                      <input
+                        type="range"
+                        min="0.15"
+                        max="1"
+                        step="0.05"
+                        value={canvasBackgroundOpacity}
+                        onChange={(event) =>
+                          setCanvasBackgroundOpacity(Number(event.target.value))
+                        }
+                        className="w-28 accent-blue-500"
+                      />
+                      <span>{Math.round(canvasBackgroundOpacity * 100)}%</span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={handleClearCanvasBackground}
+                      className="rounded bg-zinc-100 px-3 py-1.5 text-sm transition-colors hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                    >
+                      {t('btn.clearBackground')}
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                    {t('canvas.backgroundEmpty')}
+                  </p>
+                )}
+
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                  {t('canvas.logicalScreen')}: {logicalCanvasSize[0]}×{logicalCanvasSize[1]}
+                </p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                  {t('canvas.uiRoot')}: {logicalRootSize[0]}×{logicalRootSize[1]}
+                </p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                  {t('canvas.renderScale')}: {renderScale.toFixed(2)}x
+                </p>
+              </div>
+
+              <div
+                className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-black shadow-2xl dark:border-zinc-800"
+                style={{ width: viewportSize[0], height: viewportSize[1] }}
+              >
+                {canvasBackground ? (
+                  <>
+                    <img
+                      src={canvasBackground.objectUrl}
+                      alt={canvasBackground.name}
+                      className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+                      style={{ opacity: canvasBackgroundOpacity }}
+                      draggable={false}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-black/10" />
+                  </>
+                ) : (
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_transparent_42%),linear-gradient(180deg,_rgba(39,39,42,0.92),_rgba(9,9,11,1))]" />
+                )}
+
+                <div className="pointer-events-none absolute inset-0 border border-white/10" />
+
+                <div
+                  className="absolute"
+                  style={{
+                    left: canvasDisplayOffset[0],
+                    top: canvasDisplayOffset[1],
+                    width: scaledCanvasSize[0],
+                    height: scaledCanvasSize[1],
+                  }}
+                >
+                  <div
+                    className="absolute left-0 top-0"
+                    style={{
+                      width: logicalCanvasSize[0],
+                      height: logicalCanvasSize[1],
+                      transform: `scale(${renderScale})`,
+                      transformOrigin: 'top left',
+                    }}
+                  >
+                    <div className="pointer-events-none absolute inset-0 border border-dashed border-white/15" />
+
+                    <div
+                      className={`absolute overflow-hidden border bg-white/8 shadow-2xl transition-colors dark:bg-zinc-900/20 ${
+                        draggingType
+                          ? 'border-emerald-400/70 ring-2 ring-emerald-500/20'
+                          : 'border-white/30'
+                      }`}
+                      style={{
+                        left: logicalRootPosition[0],
+                        top: logicalRootPosition[1],
+                        width: logicalRootSize[0],
+                        height: logicalRootSize[1],
+                      }}
+                      onClick={(event) => event.stopPropagation()}
+                      onDragOver={(event) => {
+                        if (!draggingType) return;
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = 'copy';
+                      }}
+                      onDrop={handleRootDrop}
+                    >
+                      <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/55 px-2 py-1 text-[10px] font-medium tracking-wide text-white">
+                        {t('canvas.uiRoot')} · {logicalRootSize[0]}×{logicalRootSize[1]}
+                      </div>
+
+                      <div className="pointer-events-none absolute inset-0 border border-dashed border-white/25" />
+
+                      {displayElements.map((element) => (
+                        <CanvasElement
+                          key={element.id}
+                          el={element}
+                          parentSize={logicalRootSize}
+                          selectedId={selectedId}
+                          draggingType={draggingType}
+                          canvasScale={renderScale}
+                          onSelect={selectElement}
+                          onDragStop={handleDragStop}
+                          onResizeStop={handleResizeStop}
+                          onDropNewElement={createElementAt}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 text-zinc-400 dark:text-zinc-600">

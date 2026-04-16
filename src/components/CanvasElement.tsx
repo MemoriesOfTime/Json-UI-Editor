@@ -127,6 +127,7 @@ interface Props {
   parentSize: [number, number];
   selectedId: string | null;
   draggingType: ElementType | null;
+  canvasScale: number;
   parentAlpha?: number;
   onSelect: (id: string) => void;
   onDragStop: (id: string, offset: [number, number]) => void;
@@ -147,6 +148,7 @@ export function CanvasElement({
   parentSize,
   selectedId,
   draggingType,
+  canvasScale,
   parentAlpha = 1,
   onSelect,
   onDragStop,
@@ -462,6 +464,7 @@ export function CanvasElement({
         );
         onResizeStop(el.id, nextSize, nextOffset);
       }}
+      scale={canvasScale}
       bounds="parent"
       className={`absolute ${
         isSelected ? 'ring-2 ring-blue-500' : 'hover:ring-1 hover:ring-zinc-300 dark:hover:ring-zinc-600'
@@ -504,8 +507,8 @@ export function CanvasElement({
 
               const rect = event.currentTarget.getBoundingClientRect();
               onDropNewElement(droppedType, el.id, [
-                Math.round(event.clientX - rect.left),
-                Math.round(event.clientY - rect.top),
+                Math.round((event.clientX - rect.left) / canvasScale),
+                Math.round((event.clientY - rect.top) / canvasScale),
               ]);
             }
           : undefined
@@ -536,6 +539,7 @@ export function CanvasElement({
                 parentSize={el.size}
                 selectedId={selectedId}
                 draggingType={draggingType}
+                canvasScale={canvasScale}
                 parentAlpha={childAlpha}
                 onSelect={onSelect}
                 onDragStop={onDragStop}

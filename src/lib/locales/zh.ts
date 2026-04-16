@@ -11,6 +11,8 @@ export const zh: Record<string, string> = {
   'btn.preview': '预览',
   'btn.close': '关闭',
   'btn.copyToClipboard': '复制到剪贴板',
+  'btn.loadBackground': '载入背景图',
+  'btn.clearBackground': '清除背景图',
   'btn.toggleRightSidebar': '切换右侧属性栏',
   'btn.switchToLight': '切换到亮色模式',
   'btn.switchToDark': '切换到暗色模式',
@@ -28,6 +30,17 @@ export const zh: Record<string, string> = {
   'sidebar.openHint': '打开资源包以开始使用',
   'sidebar.openHintSub':
     '点击左侧按钮加载资源包后，即可从组件库拖拽新增控件',
+
+  // 画布
+  'canvas.backgroundHint': '仅用于编辑参考，不会导出',
+  'canvas.backgroundOpacity': '背景透明度',
+  'canvas.backgroundEmpty': '可加载一张游戏截图作为布局底图',
+  'canvas.viewportSize': '游戏视口',
+  'canvas.customViewport': '自定义',
+  'canvas.guiScale': 'GUI 缩放',
+  'canvas.logicalScreen': '逻辑屏幕',
+  'canvas.renderScale': '实际倍率',
+  'canvas.uiRoot': 'UI 根区域',
 
   // 属性面板
   'props.title': '属性',
@@ -89,6 +102,9 @@ export const zh: Record<string, string> = {
   'status.added': '已新增 {type}',
   'status.addedToContainer': '已添加到容器 {name}',
   'status.addedToRoot': '已添加到根画布',
+  'status.canvasBackgroundLoaded': '已载入背景图: {file}',
+  'status.canvasBackgroundCleared': '已清除背景图',
+  'status.canvasBackgroundLoadFailed': '背景图加载失败，请选择有效图片',
   'status.uiDirNotFound': '未找到 ui 目录',
 
   // 顶部栏

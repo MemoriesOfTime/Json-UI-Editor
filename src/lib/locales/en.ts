@@ -11,6 +11,8 @@ export const en: Record<string, string> = {
   'btn.preview': 'Preview',
   'btn.close': 'Close',
   'btn.copyToClipboard': 'Copy to Clipboard',
+  'btn.loadBackground': 'Load Background',
+  'btn.clearBackground': 'Clear Background',
   'btn.toggleRightSidebar': 'Toggle Right Sidebar',
   'btn.switchToLight': 'Switch to Light Mode',
   'btn.switchToDark': 'Switch to Dark Mode',
@@ -28,6 +30,17 @@ export const en: Record<string, string> = {
   'sidebar.openHint': 'Open a resource pack to get started',
   'sidebar.openHintSub':
     'Click the button on the left to load a resource pack, then drag components from the library',
+
+  // Canvas
+  'canvas.backgroundHint': 'Editor reference only, not exported',
+  'canvas.backgroundOpacity': 'Background opacity',
+  'canvas.backgroundEmpty': 'Load a gameplay screenshot as the layout backdrop',
+  'canvas.viewportSize': 'Game viewport',
+  'canvas.customViewport': 'Custom',
+  'canvas.guiScale': 'GUI scale',
+  'canvas.logicalScreen': 'Logical screen',
+  'canvas.renderScale': 'Render scale',
+  'canvas.uiRoot': 'UI root',
 
   // Properties
   'props.title': 'Properties',
@@ -92,6 +105,9 @@ export const en: Record<string, string> = {
   'status.added': 'Added {type}',
   'status.addedToContainer': 'Added to container {name}',
   'status.addedToRoot': 'Added to root canvas',
+  'status.canvasBackgroundLoaded': 'Loaded background image: {file}',
+  'status.canvasBackgroundCleared': 'Background image cleared',
+  'status.canvasBackgroundLoadFailed': 'Failed to load background image',
   'status.uiDirNotFound': 'UI directory not found',
 
   // Header

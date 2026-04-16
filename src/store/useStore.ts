@@ -89,6 +89,13 @@ interface AddElementOptions {
   position?: [number, number];
 }
 
+export interface ResolvedControlFrame {
+  size: [number, number];
+  offset: [number, number];
+  anchorFrom?: AnchorType;
+  anchorTo?: AnchorType;
+}
+
 export interface ElementDirty {
   size?: boolean;
   offset?: boolean;
@@ -259,7 +266,7 @@ function resolvePercentSuffix(
   }
 }
 
-function resolveRawArray(
+export function resolveRawArray(
   raw: unknown,
   parentSize: [number, number],
   canvasSize: [number, number],
@@ -272,6 +279,42 @@ function resolveRawArray(
     Number.isFinite(w) ? w : fallback[0],
     Number.isFinite(h) ? h : fallback[1],
   ];
+}
+
+export function resolveControlFrame(
+  control: ParsedControl | null | undefined,
+  viewportSize: [number, number],
+  fallbackSize: [number, number],
+): ResolvedControlFrame {
+  if (!control) {
+    return {
+      size: fallbackSize,
+      offset: [0, 0],
+    };
+  }
+
+  const size: [number, number] = Array.isArray(control.rawProps.size)
+    ? resolveRawArray(control.rawProps.size, viewportSize, viewportSize, fallbackSize)
+    : (control.size && Number.isFinite(control.size[0]) && Number.isFinite(control.size[1])
+      ? control.size
+      : fallbackSize);
+  const offset: [number, number] = Array.isArray(control.rawProps.offset)
+    ? resolveRawArray(
+        control.rawProps.offset,
+        viewportSize,
+        viewportSize,
+        [0, 0] as [number, number],
+      )
+    : (control.offset && Number.isFinite(control.offset[0]) && Number.isFinite(control.offset[1])
+      ? control.offset
+      : [0, 0]);
+
+  return {
+    size,
+    offset,
+    anchorFrom: control.anchor_from as AnchorType | undefined,
+    anchorTo: control.anchor_to as AnchorType | undefined,
+  };
 }
 
 let idCounter = 0;
@@ -378,6 +421,44 @@ export function parsedControlsToElements(
   canvasSize: [number, number],
 ): UIElement[] {
   return controls.map((ctrl) => controlToElement(ctrl, canvasSize, canvasSize));
+}
+
+function resolveElementLayout(
+  element: UIElement,
+  parentSize: [number, number],
+  canvasSize: [number, number],
+): UIElement {
+  const nextSize =
+    element.dirty?.size === true
+      ? element.size
+      : Array.isArray(element.rawProps.size)
+        ? resolveRawArray(element.rawProps.size, parentSize, canvasSize, element.size)
+        : element.size;
+  const nextOffset =
+    element.dirty?.offset === true
+      ? element.offset
+      : Array.isArray(element.rawProps.offset)
+        ? resolveRawArray(element.rawProps.offset, parentSize, canvasSize, element.offset)
+        : element.offset;
+
+  return {
+    ...element,
+    size: nextSize,
+    offset: nextOffset,
+    children: element.children.map((child) =>
+      resolveElementLayout(child, nextSize, canvasSize),
+    ),
+  };
+}
+
+export function resolveElementLayoutTree(
+  elements: UIElement[],
+  parentSize: [number, number],
+  canvasSize: [number, number],
+): UIElement[] {
+  return elements.map((element) =>
+    resolveElementLayout(element, parentSize, canvasSize),
+  );
 }
 
 export function flattenElements(elements: UIElement[]): UIElement[] {
