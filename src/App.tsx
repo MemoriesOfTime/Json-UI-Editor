@@ -137,6 +137,7 @@ function App() {
     canRedo,
     undo,
     redo,
+    addUiFile,
   } = useStore();
 
   const t = useT();
@@ -146,6 +147,7 @@ function App() {
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
   const [showPreview, setShowPreview] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [isEditorToolbarCollapsed, setIsEditorToolbarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -420,6 +422,12 @@ function App() {
     return updates;
   }
 
+  function handleNewFile() {
+    const input = prompt(t('status.enterFileName'));
+    if (!input?.trim()) return;
+    addUiFile(input.trim());
+  }
+
   function handleExport() {
     if (!currentFile) return;
 
@@ -642,6 +650,13 @@ function App() {
                     </li>
                   ))}
                 </ul>
+                <button
+                  onClick={handleNewFile}
+                  className="mc-btn flex w-full items-center justify-center gap-2 text-sm mt-1"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {t('btn.newFile')}
+                </button>
               </SidebarSection>
             )}
 
@@ -1556,10 +1571,15 @@ function App() {
                 {t('btn.close')}
               </button>
               <button
-                onClick={() => navigator.clipboard.writeText(jsonPreview)}
+                onClick={() => {
+                  navigator.clipboard.writeText(jsonPreview).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  });
+                }}
                 className="mc-btn mc-btn-blue text-sm"
               >
-                {t('btn.copyToClipboard')}
+                {copied ? t('btn.copied') : t('btn.copyToClipboard')}
               </button>
             </div>
           </div>

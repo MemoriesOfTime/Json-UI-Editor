@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { ResourcePackProject } from '../lib/loadResourcePack';
-import type { ParsedControl } from '../lib/parseUiJson';
+import type { ProjectFile, ResourcePackProject } from '../lib/loadResourcePack';
+import type { ParsedControl, ParsedUiFile } from '../lib/parseUiJson';
 
 export type ElementType =
   | 'panel'
@@ -138,6 +138,7 @@ interface EditorState {
   updateElement: (id: string, updates: Partial<UIElement>) => void;
   addElement: (type: ElementType, options?: AddElementOptions) => string | null;
   removeElement: (id: string) => void;
+  addUiFile: (name: string) => void;
   addTexture: (asset: TextureAsset) => void;
   removeTexture: (path: string) => void;
   undo: () => void;
@@ -983,6 +984,60 @@ export const useStore = create<EditorState>((set) => ({
       const nextSelectedId = resolveSelection(elements, state.selectedId);
       return commitElementsChange(state, elements, nextSelectedId);
     }),
+  addUiFile: (name) => {
+    set((state) => {
+      if (!state.project) return {};
+
+      const fileName = name.endsWith('.json') ? name : `${name}.json`;
+      const namespace = fileName.replace(/\.json$/, '');
+      const rootKey = `${namespace}_menu_root`;
+      const path = `ui/${fileName}`;
+
+      if (state.project.uiFiles.some((f) => f.path === path)) return {};
+
+      const rawJson: Record<string, unknown> = {
+        namespace,
+        [rootKey]: {
+          type: 'panel',
+          size: ['100%', '100%'],
+          controls: [],
+        },
+      };
+
+      const parsed: ParsedUiFile = {
+        fileName,
+        namespace,
+        rawJson,
+        rootControls: [{
+          key: rootKey,
+          rawProps: {
+            type: 'panel',
+            size: ['100%', '100%'],
+            controls: [],
+          },
+          type: 'panel',
+          offset: [0, 0],
+          controls: [],
+        }],
+      };
+
+      const newFile: ProjectFile = { name: fileName, path, parsed };
+      const drafts = persistDraft(state.activeFile, state.drafts, state.elements);
+
+      return {
+        project: {
+          ...state.project,
+          uiFiles: [...state.project.uiFiles, newFile],
+        },
+        activeFile: path,
+        elements: [],
+        drafts,
+        selectedId: null,
+        canvasSize: [320, 240] as [number, number],
+        ...getHistoryFlags(state.history, path),
+      };
+    });
+  },
   addTexture: (asset) =>
     set((state) => ({
       textureMap: { ...state.textureMap, [asset.path]: asset },

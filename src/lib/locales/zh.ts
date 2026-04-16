@@ -11,6 +11,7 @@ export const zh: Record<string, string> = {
   'btn.preview': '预览',
   'btn.close': '关闭',
   'btn.copyToClipboard': '复制到剪贴板',
+  'btn.copied': '已复制',
   'btn.loadBackground': '载入背景图',
   'btn.clearBackground': '清除背景图',
   'btn.expandCanvasToolbar': '展开视口栏',
@@ -20,6 +21,7 @@ export const zh: Record<string, string> = {
   'btn.switchToDark': '切换到暗色模式',
   'btn.lightMode': '亮色',
   'btn.darkMode': '暗色',
+  'btn.newFile': '新建文件',
 
   // 侧边栏
   'sidebar.uiFiles': 'UI 文件',
@@ -111,6 +113,7 @@ export const zh: Record<string, string> = {
   'status.canvasBackgroundCleared': '已清除背景图',
   'status.canvasBackgroundLoadFailed': '背景图加载失败，请选择有效图片',
   'status.uiDirNotFound': '未找到 ui 目录',
+  'status.enterFileName': '请输入文件名（不含 .json 后缀）',
 
   // 顶部栏
   'header.noFileSelected': '未选择文件',

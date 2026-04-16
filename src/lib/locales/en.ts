@@ -11,6 +11,7 @@ export const en: Record<string, string> = {
   'btn.preview': 'Preview',
   'btn.close': 'Close',
   'btn.copyToClipboard': 'Copy to Clipboard',
+  'btn.copied': 'Copied',
   'btn.loadBackground': 'Load Background',
   'btn.clearBackground': 'Clear Background',
   'btn.expandCanvasToolbar': 'Expand Viewport Bar',
@@ -20,6 +21,7 @@ export const en: Record<string, string> = {
   'btn.switchToDark': 'Switch to Dark Mode',
   'btn.lightMode': 'Light',
   'btn.darkMode': 'Dark',
+  'btn.newFile': 'New File',
 
   // Sidebar
   'sidebar.uiFiles': 'UI Files',
@@ -114,6 +116,7 @@ export const en: Record<string, string> = {
   'status.canvasBackgroundCleared': 'Background image cleared',
   'status.canvasBackgroundLoadFailed': 'Failed to load background image',
   'status.uiDirNotFound': 'UI directory not found',
+  'status.enterFileName': 'Enter file name (without .json extension)',
 
   // Header
   'header.noFileSelected': 'No file selected',
