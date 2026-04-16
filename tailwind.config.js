@@ -6,8 +6,11 @@ export default {
   ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        mc: ['Minecraft', 'monospace'],
+      },
+    },
   },
   plugins: [],
 }
-

@@ -28,10 +28,10 @@ export function TexturePanel() {
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
           onClick={() => inputRef.current?.click()}
-          className="border border-dashed border-zinc-300 rounded-lg p-3 text-center cursor-pointer hover:border-zinc-400 hover:bg-zinc-50 transition-colors dark:border-zinc-700 dark:hover:border-zinc-500 dark:hover:bg-zinc-800/50"
+          className="mc-input cursor-pointer p-3 text-center"
         >
           <Upload className="w-5 h-5 mx-auto mb-1 opacity-40" />
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">{t('texture.dropHint')}</p>
+          <p className="text-xs mc-text-dim">{t('texture.dropHint')}</p>
         </div>
 
         <input
@@ -51,16 +51,17 @@ export function TexturePanel() {
             {entries.map((t) => (
               <li
                 key={t.path}
-                className="flex items-center gap-2 px-2 py-1.5 rounded bg-zinc-100/60 group dark:bg-zinc-800/60"
+                className="group flex items-center gap-2 px-2 py-1.5 mc-panel"
               >
                 <img
                   src={t.objectUrl}
                   alt=""
-                  className="w-8 h-8 object-cover rounded border border-zinc-200 flex-shrink-0 dark:border-zinc-700"
+                  className="w-8 h-8 object-cover flex-shrink-0 mc-input"
+                  style={{ imageRendering: 'pixelated' }}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-zinc-700 truncate dark:text-zinc-300">{t.path}</p>
-                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                  <p className="text-xs mc-text truncate">{t.path}</p>
+                  <p className="text-[10px] mc-text-dim">
                     {t.naturalWidth}×{t.naturalHeight}
                   </p>
                 </div>
@@ -69,7 +70,7 @@ export function TexturePanel() {
                     e.stopPropagation();
                     removeTexture(t.path);
                   }}
-                  className="p-1 rounded hover:bg-zinc-200 text-zinc-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity dark:hover:bg-zinc-700 dark:text-zinc-500"
+                  className="mc-btn mc-btn-danger p-1 opacity-0 group-hover:opacity-100"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

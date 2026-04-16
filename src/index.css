@@ -2,10 +2,470 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/fonts/Minecraft.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/fonts/Minecraft-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pixelify Sans';
+  src: url('/fonts/PixelifySans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pixelify Sans';
+  src: url('/fonts/PixelifySans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
+  :root {
+    --mc-bg: #e8e8e8;
+    --mc-bg-deep: #d6d6d6;
+    --mc-panel-bg: #f0f0f0;
+    --mc-panel-border-light: #fff;
+    --mc-panel-border-dark: #b0b0b0;
+    --mc-panel-shadow: rgba(0, 0, 0, 0.08);
+    --mc-text: #1a1a1a;
+    --mc-text-dim: #666;
+    --mc-text-title: #1a1a1a;
+    --mc-text-title-color: #1a1a1a;
+    --mc-title-shadow: none;
+    --mc-btn-text-shadow: none;
+    --mc-btn-hover-text-shadow: none;
+    --mc-section-title-shadow: none;
+    --mc-btn-bg: #ddd;
+    --mc-btn-border-light: #f0f0f0;
+    --mc-btn-border-dark: #aaa;
+    --mc-btn-text: #1a1a1a;
+    --mc-btn-hover-bg: #eee;
+    --mc-btn-hover-border-light: #fff;
+    --mc-btn-hover-border-dark: #bbb;
+    --mc-btn-hover-text: #3a6a3a;
+    --mc-btn-active-bg: #c8c8c8;
+    --mc-btn-active-border-light: #aaa;
+    --mc-btn-active-border-dark: #f0f0f0;
+    --mc-btn-disabled-bg: #ddd;
+    --mc-btn-disabled-border-light: #e8e8e8;
+    --mc-btn-disabled-border-dark: #bbb;
+    --mc-btn-disabled-text: #aaa;
+    --mc-btn-blue-bg: #5a7abf;
+    --mc-btn-blue-border-light: #8aaae0;
+    --mc-btn-blue-border-dark: #3a5a9f;
+    --mc-btn-blue-hover-bg: #6a8acf;
+    --mc-btn-blue-hover-border-light: #9abae8;
+    --mc-btn-blue-hover-border-dark: #4a6abf;
+    --mc-btn-blue-hover-text: #fff;
+    --mc-btn-blue-disabled-bg: #5a7abf;
+    --mc-btn-blue-disabled-border-light: #8aaae0;
+    --mc-btn-blue-disabled-border-dark: #3a5a9f;
+    --mc-btn-blue-disabled-text: #c0c0c0;
+    --mc-btn-primary-bg: #5aaa5a;
+    --mc-btn-primary-border-light: #7aca7a;
+    --mc-btn-primary-border-dark: #3a8a3a;
+    --mc-btn-primary-hover-bg: #6aba6a;
+    --mc-btn-primary-hover-border-light: #8ada8a;
+    --mc-btn-primary-hover-border-dark: #4a9a4a;
+    --mc-btn-primary-disabled-bg: #5aaa5a;
+    --mc-btn-primary-disabled-text: #a0a0a0;
+    --mc-btn-danger-bg: #bf5a5a;
+    --mc-btn-danger-border-light: #df7a7a;
+    --mc-btn-danger-border-dark: #9f3a3a;
+    --mc-btn-danger-hover-bg: #cf6a6a;
+    --mc-btn-danger-hover-text: #ffaaaa;
+    --mc-input-bg: #fff;
+    --mc-input-border-light: #ccc;
+    --mc-input-border-dark: #999;
+    --mc-input-text: #1a1a1a;
+    --mc-input-focus-border-light: #3a3aff;
+    --mc-input-focus-border-dark: #7a7aff;
+    --mc-input-placeholder: #aaa;
+    --mc-divider-bg: #c0c0c0;
+    --mc-divider-shadow: #e0e0e0;
+    --mc-scrollbar-track: #e0e0e0;
+    --mc-scrollbar-thumb: #c0c0c0;
+    --mc-scrollbar-thumb-light: #d0d0d0;
+    --mc-scrollbar-thumb-dark: #aaa;
+    --mc-scrollbar-thumb-hover: #b0b0b0;
+    --mc-hover-item: rgba(0, 0, 0, 0.06);
+    --mc-select-bg: rgba(40, 70, 130, 0.12);
+    --mc-select-text: #1a4a8f;
+    --mc-canvas-bg: #d0d0d0;
+    --mc-canvas-border-light: #e0e0e0;
+    --mc-canvas-border-dark: #aaa;
+    --mc-icon-box-bg: #e0e0e0;
+    --mc-icon-box-border-light: #f0f0f0;
+    --mc-icon-box-border-dark: #c0c0c0;
+    --mc-icon-color: #1a4a8f;
+    --mc-success: #1a6a1a;
+    --mc-overlay: rgba(255, 255, 255, 0.6);
+  }
+
+  .dark {
+    --mc-bg: #1d1d1d;
+    --mc-bg-deep: #111;
+    --mc-panel-bg: #2d2d2d;
+    --mc-panel-border-light: #555;
+    --mc-panel-border-dark: #1a1a1a;
+    --mc-panel-shadow: rgba(0, 0, 0, 0.5);
+    --mc-text: #e0e0e0;
+    --mc-text-dim: #999;
+    --mc-text-title: #ffff00;
+    --mc-text-title-color: #ffff00;
+    --mc-title-shadow: 1px 1px 0 rgba(63, 63, 0, 0.7);
+    --mc-btn-text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+    --mc-btn-hover-text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+    --mc-section-title-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+    --mc-btn-bg: #727272;
+    --mc-btn-border-light: #aaa;
+    --mc-btn-border-dark: #444;
+    --mc-btn-text: #e0e0e0;
+    --mc-btn-hover-bg: #878787;
+    --mc-btn-hover-border-light: #fff;
+    --mc-btn-hover-border-dark: #5a5a5a;
+    --mc-btn-hover-text: #ffffa0;
+    --mc-btn-active-bg: #5a5a5a;
+    --mc-btn-active-border-light: #444;
+    --mc-btn-active-border-dark: #aaa;
+    --mc-btn-disabled-bg: #4a4a4a;
+    --mc-btn-disabled-border-light: #666;
+    --mc-btn-disabled-border-dark: #333;
+    --mc-btn-disabled-text: #8a8a8a;
+    --mc-btn-blue-bg: #3a5a8b;
+    --mc-btn-blue-border-light: #5a7aab;
+    --mc-btn-blue-border-dark: #2a4a6a;
+    --mc-btn-blue-hover-bg: #4a6a9b;
+    --mc-btn-blue-hover-border-light: #6a8abb;
+    --mc-btn-blue-hover-border-dark: #3a5a7a;
+    --mc-btn-blue-hover-text: #aaddff;
+    --mc-btn-blue-disabled-bg: #2a3a5a;
+    --mc-btn-blue-disabled-border-light: #4a5a7a;
+    --mc-btn-blue-disabled-border-dark: #1a2a4a;
+    --mc-btn-blue-disabled-text: #7a8a9a;
+    --mc-btn-primary-bg: #3a7a3a;
+    --mc-btn-primary-border-light: #5a9a5a;
+    --mc-btn-primary-border-dark: #2a5a2a;
+    --mc-btn-primary-hover-bg: #4a8a4a;
+    --mc-btn-primary-hover-border-light: #6aaa6a;
+    --mc-btn-primary-hover-border-dark: #3a6a3a;
+    --mc-btn-primary-disabled-bg: #2a4a2a;
+    --mc-btn-primary-disabled-text: #7a8a7a;
+    --mc-btn-danger-bg: #8b3a3a;
+    --mc-btn-danger-border-light: #ab5a5a;
+    --mc-btn-danger-border-dark: #6a2a2a;
+    --mc-btn-danger-hover-bg: #9b4a4a;
+    --mc-btn-danger-hover-text: #ffaaaa;
+    --mc-input-bg: #000;
+    --mc-input-border-light: #aaa;
+    --mc-input-border-dark: #555;
+    --mc-input-text: #e0e0e0;
+    --mc-input-focus-border-light: #3a3aff;
+    --mc-input-focus-border-dark: #7a7aff;
+    --mc-input-placeholder: #707070;
+    --mc-divider-bg: #555;
+    --mc-divider-shadow: #777;
+    --mc-scrollbar-track: #2d2d2d;
+    --mc-scrollbar-thumb: #555;
+    --mc-scrollbar-thumb-light: #777;
+    --mc-scrollbar-thumb-dark: #333;
+    --mc-scrollbar-thumb-hover: #6a6a6a;
+    --mc-hover-item: rgba(255, 255, 255, 0.06);
+    --mc-select-bg: rgba(58, 90, 191, 0.2);
+    --mc-select-text: #aaddff;
+    --mc-canvas-bg: #111;
+    --mc-canvas-border-light: #555;
+    --mc-canvas-border-dark: #1a1a1a;
+    --mc-icon-box-bg: #4a4a4a;
+    --mc-icon-box-border-light: #666;
+    --mc-icon-box-border-dark: #333;
+    --mc-icon-color: #55ffff;
+    --mc-success: #55ff55;
+    --mc-overlay: rgba(0, 0, 0, 0.7);
+  }
+
   body {
-    @apply bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100;
     margin: 0;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: 'Pixelify Sans', 'Minecraft', monospace;
+    background-color: var(--mc-bg);
+    color: var(--mc-text);
+  }
+
+  ::selection {
+    background-color: rgba(255, 255, 0, 0.3);
+    color: var(--mc-text-title-color);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--mc-scrollbar-thumb) var(--mc-scrollbar-track);
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--mc-scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--mc-scrollbar-thumb);
+    border: 1px solid;
+    border-color: var(--mc-scrollbar-thumb-light) var(--mc-scrollbar-thumb-dark) var(--mc-scrollbar-thumb-dark) var(--mc-scrollbar-thumb-light);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--mc-scrollbar-thumb-hover);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: var(--mc-scrollbar-track);
+  }
+
+  /* Fallback native prefers-color-scheme logic in case JS theme toggler hasn't run yet */
+  @media (prefers-color-scheme: dark) {
+    html:not(.light) {
+      --mc-bg: #1d1d1d;
+      --mc-bg-deep: #111;
+      --mc-panel-bg: #2d2d2d;
+      --mc-panel-border-light: #555;
+      --mc-panel-border-dark: #1a1a1a;
+      --mc-panel-shadow: rgba(0, 0, 0, 0.5);
+      --mc-text: #e0e0e0;
+      --mc-text-dim: #999;
+      --mc-text-title: #ffff00;
+      --mc-text-title-color: #ffff00;
+      --mc-title-shadow: 1px 1px 0 rgba(63, 63, 0, 0.7);
+      --mc-btn-text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+      --mc-btn-hover-text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+      --mc-section-title-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+      --mc-btn-bg: #727272;
+      --mc-btn-border-light: #aaa;
+      --mc-btn-border-dark: #444;
+      --mc-btn-text: #e0e0e0;
+      --mc-btn-hover-bg: #878787;
+      --mc-btn-hover-border-light: #fff;
+      --mc-btn-hover-border-dark: #5a5a5a;
+      --mc-btn-hover-text: #ffffa0;
+      --mc-btn-active-bg: #5a5a5a;
+      --mc-btn-active-border-light: #444;
+      --mc-btn-active-border-dark: #aaa;
+      --mc-btn-disabled-bg: #4a4a4a;
+      --mc-btn-disabled-border-light: #666;
+      --mc-btn-disabled-border-dark: #333;
+      --mc-btn-disabled-text: #8a8a8a;
+      --mc-btn-blue-bg: #3a5a8b;
+      --mc-btn-blue-border-light: #5a7aab;
+      --mc-btn-blue-border-dark: #2a4a6a;
+      --mc-btn-blue-hover-bg: #4a6a9b;
+      --mc-btn-blue-hover-border-light: #6a8abb;
+      --mc-btn-blue-hover-border-dark: #3a5a7a;
+      --mc-btn-blue-hover-text: #aaddff;
+      --mc-btn-blue-disabled-bg: #2a3a5a;
+      --mc-btn-blue-disabled-border-light: #4a5a7a;
+      --mc-btn-blue-disabled-border-dark: #1a2a4a;
+      --mc-btn-blue-disabled-text: #7a8a9a;
+      --mc-btn-primary-bg: #3a7a3a;
+      --mc-btn-primary-border-light: #5a9a5a;
+      --mc-btn-primary-border-dark: #2a5a2a;
+      --mc-btn-primary-hover-bg: #4a8a4a;
+      --mc-btn-primary-hover-border-light: #6aaa6a;
+      --mc-btn-primary-hover-border-dark: #3a6a3a;
+      --mc-btn-primary-disabled-bg: #2a4a2a;
+      --mc-btn-primary-disabled-text: #7a8a7a;
+      --mc-btn-danger-bg: #8b3a3a;
+      --mc-btn-danger-border-light: #ab5a5a;
+      --mc-btn-danger-border-dark: #6a2a2a;
+      --mc-btn-danger-hover-bg: #9b4a4a;
+      --mc-btn-danger-hover-text: #ffaaaa;
+      --mc-input-bg: #000;
+      --mc-input-border-light: #aaa;
+      --mc-input-border-dark: #555;
+      --mc-input-text: #e0e0e0;
+      --mc-input-focus-border-light: #3a3aff;
+      --mc-input-focus-border-dark: #7a7aff;
+      --mc-input-placeholder: #707070;
+      --mc-divider-bg: #555;
+      --mc-divider-shadow: #777;
+      --mc-scrollbar-track: #2d2d2d;
+      --mc-scrollbar-thumb: #555;
+      --mc-scrollbar-thumb-light: #777;
+      --mc-scrollbar-thumb-dark: #333;
+      --mc-scrollbar-thumb-hover: #6a6a6a;
+      --mc-hover-item: rgba(255, 255, 255, 0.06);
+      --mc-select-bg: rgba(58, 90, 191, 0.2);
+      --mc-select-text: #aaddff;
+      --mc-canvas-bg: #111;
+      --mc-canvas-border-light: #555;
+      --mc-canvas-border-dark: #1a1a1a;
+      --mc-icon-box-bg: #4a4a4a;
+      --mc-icon-box-border-light: #666;
+      --mc-icon-box-border-dark: #333;
+      --mc-icon-color: #55ffff;
+      --mc-success: #55ff55;
+      --mc-overlay: rgba(0, 0, 0, 0.7);
+    }
+  }
+}
+
+@layer components {
+  .mc-panel {
+    background-color: var(--mc-panel-bg);
+    border: 3px solid;
+    border-color: var(--mc-panel-border-light) var(--mc-panel-border-dark) var(--mc-panel-border-dark) var(--mc-panel-border-light);
+    box-shadow: inset 1px 1px 0 var(--mc-panel-shadow), inset -1px -1px 0 var(--mc-panel-shadow);
+  }
+
+  .mc-btn {
+    background-color: var(--mc-btn-bg);
+    border: 3px solid;
+    border-color: var(--mc-btn-border-light) var(--mc-btn-border-dark) var(--mc-btn-border-dark) var(--mc-btn-border-light);
+    color: var(--mc-btn-text);
+    text-shadow: var(--mc-btn-text-shadow);
+    font-family: 'Pixelify Sans', 'Minecraft', monospace;
+    padding: 6px 12px;
+    transition: none;
+  }
+  .mc-btn:hover {
+    background-color: var(--mc-btn-hover-bg);
+    border-color: var(--mc-btn-hover-border-light) var(--mc-btn-hover-border-dark) var(--mc-btn-hover-border-dark) var(--mc-btn-hover-border-light);
+    color: var(--mc-btn-hover-text);
+    text-shadow: var(--mc-btn-hover-text-shadow);
+  }
+  .mc-btn:active {
+    background-color: var(--mc-btn-active-bg);
+    border-color: var(--mc-btn-active-border-light) var(--mc-btn-active-border-dark) var(--mc-btn-active-border-dark) var(--mc-btn-active-border-light);
+  }
+  .mc-btn:disabled {
+    background-color: var(--mc-btn-disabled-bg);
+    border-color: var(--mc-btn-disabled-border-light) var(--mc-btn-disabled-border-dark) var(--mc-btn-disabled-border-dark) var(--mc-btn-disabled-border-light);
+    color: var(--mc-btn-disabled-text);
+    cursor: not-allowed;
+    text-shadow: none;
+  }
+
+  .mc-btn-primary {
+    background-color: var(--mc-btn-primary-bg);
+    border-color: var(--mc-btn-primary-border-light) var(--mc-btn-primary-border-dark) var(--mc-btn-primary-border-dark) var(--mc-btn-primary-border-light);
+  }
+  .mc-btn-primary:hover {
+    background-color: var(--mc-btn-primary-hover-bg);
+    border-color: var(--mc-btn-primary-hover-border-light) var(--mc-btn-primary-hover-border-dark) var(--mc-btn-primary-hover-border-dark) var(--mc-btn-primary-hover-border-light);
+    color: var(--mc-btn-hover-text);
+  }
+  .mc-btn-primary:disabled {
+    background-color: var(--mc-btn-primary-disabled-bg);
+    color: var(--mc-btn-primary-disabled-text);
+  }
+
+  .mc-btn-danger {
+    background-color: var(--mc-btn-danger-bg);
+    border-color: var(--mc-btn-danger-border-light) var(--mc-btn-danger-border-dark) var(--mc-btn-danger-border-dark) var(--mc-btn-danger-border-light);
+  }
+  .mc-btn-danger:hover {
+    background-color: var(--mc-btn-danger-hover-bg);
+    color: var(--mc-btn-danger-hover-text);
+  }
+
+  .mc-btn-blue {
+    background-color: var(--mc-btn-blue-bg);
+    border-color: var(--mc-btn-blue-border-light) var(--mc-btn-blue-border-dark) var(--mc-btn-blue-border-dark) var(--mc-btn-blue-border-light);
+  }
+  .mc-btn-blue:hover {
+    background-color: var(--mc-btn-blue-hover-bg);
+    border-color: var(--mc-btn-blue-hover-border-light) var(--mc-btn-blue-hover-border-dark) var(--mc-btn-blue-hover-border-dark) var(--mc-btn-blue-hover-border-light);
+    color: var(--mc-btn-blue-hover-text);
+  }
+  .mc-btn-blue:disabled {
+    background-color: var(--mc-btn-blue-disabled-bg);
+    border-color: var(--mc-btn-blue-disabled-border-light) var(--mc-btn-blue-disabled-border-dark) var(--mc-btn-blue-disabled-border-dark) var(--mc-btn-blue-disabled-border-light);
+    color: var(--mc-btn-blue-disabled-text);
+  }
+
+  .mc-input {
+    background-color: var(--mc-input-bg);
+    border: 2px solid;
+    border-color: var(--mc-input-border-dark) var(--mc-input-border-light) var(--mc-input-border-light) var(--mc-input-border-dark);
+    color: var(--mc-input-text);
+    font-family: 'Pixelify Sans', 'Minecraft', monospace;
+    padding: 4px 8px;
+    text-shadow: none;
+  }
+  .mc-input:focus {
+    outline: none;
+    border-color: var(--mc-input-focus-border-light) var(--mc-input-focus-border-dark) var(--mc-input-focus-border-dark) var(--mc-input-focus-border-light);
+    box-shadow: inset 0 0 4px rgba(100, 100, 255, 0.3);
+  }
+  .mc-input::placeholder {
+    color: var(--mc-input-placeholder);
+  }
+
+  .mc-title {
+    color: var(--mc-text-title-color);
+    text-shadow: var(--mc-title-shadow);
+    font-family: 'Pixelify Sans', 'Minecraft', monospace;
+  }
+
+  .mc-section-title {
+    color: var(--mc-text-dim);
+    text-shadow: var(--mc-section-title-shadow);
+    font-family: 'Pixelify Sans', 'Minecraft', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .mc-divider {
+    border: none;
+    height: 2px;
+    background: var(--mc-divider-bg);
+    box-shadow: 0 1px 0 var(--mc-divider-shadow);
+  }
+
+  .mc-text { color: var(--mc-text); }
+  .mc-text-dim { color: var(--mc-text-dim); }
+  .mc-text-title { color: var(--mc-text-title-color); }
+  .mc-text-hover { color: var(--mc-btn-hover-text); }
+  .mc-text-success { color: var(--mc-success); }
+  .mc-text-icon { color: var(--mc-icon-color); }
+
+  .mc-bg { background-color: var(--mc-bg); }
+  .mc-bg-deep { background-color: var(--mc-bg-deep); }
+
+  .mc-hover-item:hover { background-color: var(--mc-hover-item); }
+
+  .mc-border-h {
+    border: none;
+    height: 2px;
+    background: var(--mc-divider-bg);
+    box-shadow: 0 1px 0 var(--mc-divider-shadow);
+  }
+
+  .mc-icon-box {
+    background-color: var(--mc-icon-box-bg);
+    border: 2px solid;
+    border-color: var(--mc-icon-box-border-light) var(--mc-icon-box-border-dark) var(--mc-icon-box-border-dark) var(--mc-icon-box-border-light);
+  }
+
+  .mc-select-active {
+    background-color: var(--mc-select-bg);
+    color: var(--mc-select-text);
   }
 }

@@ -23,7 +23,7 @@ export function SidebarSection({
         className="mb-2 flex cursor-pointer items-center justify-between group"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <h2 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-zinc-400 transition-colors group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300 select-none">
+        <h2 className="mc-section-title flex items-center gap-1 select-none">
           {isExpanded ? (
             <ChevronDown className="h-3.5 w-3.5" />
           ) : (

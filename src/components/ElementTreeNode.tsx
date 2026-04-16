@@ -22,16 +22,16 @@ export function ElementTreeNode({
   return (
     <li>
       <div
-        className={`flex w-full items-center gap-1 rounded py-1.5 pr-3 text-left text-xs transition-colors ${
+        className={`flex w-full items-center gap-1 py-1.5 pr-3 text-left text-xs ${
           isSelected
-            ? 'bg-blue-600/20 text-blue-400'
-            : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+            ? 'mc-select-active'
+            : 'mc-hover-item mc-text'
         }`}
         style={{ paddingLeft: `${depth * 14 + 8}px` }}
       >
         <div
-          className={`flex items-center justify-center w-4 h-4 rounded ${
-            hasChildren ? 'cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700' : ''
+          className={`flex items-center justify-center w-4 h-4 ${
+            hasChildren ? 'cursor-pointer mc-hover-item' : ''
           }`}
           onClick={(e) => {
             if (hasChildren) {
@@ -56,7 +56,7 @@ export function ElementTreeNode({
         >
           <Layers className="h-3 w-3 opacity-70" />
           <span className="min-w-0 flex-1 truncate text-left">{element.name}</span>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{element.type}</span>
+          <span className="text-[10px] mc-text-dim">{element.type}</span>
         </button>
       </div>
       

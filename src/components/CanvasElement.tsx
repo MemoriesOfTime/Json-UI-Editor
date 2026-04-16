@@ -14,6 +14,17 @@ import type { ElementType, UIElement } from '../store/useStore';
 
 export const COMPONENT_DRAG_MIME = 'application/x-jsonui-component-type';
 
+const RESIZE_HANDLE_STYLES: Record<string, CSSProperties> = {
+  top: { width: '100%', height: '6px', top: '-4px', left: '0', cursor: 'row-resize' },
+  right: { width: '6px', height: '100%', top: '0', right: '-4px', cursor: 'col-resize' },
+  bottom: { width: '100%', height: '6px', bottom: '-4px', left: '0', cursor: 'row-resize' },
+  left: { width: '6px', height: '100%', top: '0', left: '-4px', cursor: 'col-resize' },
+  topRight: { width: '12px', height: '12px', right: '-10px', top: '-10px', cursor: 'ne-resize' },
+  bottomRight: { width: '12px', height: '12px', right: '-10px', bottom: '-10px', cursor: 'se-resize' },
+  bottomLeft: { width: '12px', height: '12px', left: '-10px', bottom: '-10px', cursor: 'sw-resize' },
+  topLeft: { width: '12px', height: '12px', left: '-10px', top: '-10px', cursor: 'nw-resize' },
+};
+
 interface StandardImageCanvasProps {
   objectUrl: string;
   name: string;
@@ -342,8 +353,8 @@ export function CanvasElement({
       }
 
       return (
-        <div className="absolute inset-0 flex items-center justify-center border border-dashed border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800">
-          <ImageIcon className="h-6 w-6 opacity-30" />
+        <div className="absolute inset-0 flex items-center justify-center border border-dashed border-zinc-300/50 dark:border-zinc-700/50">
+          <ImageIcon className="h-6 w-6 opacity-20" />
         </div>
       );
     }
@@ -380,8 +391,10 @@ export function CanvasElement({
                 lineHeight: `${labelRendering.lineHeightPx}px`,
                 fontFamily: labelRendering.fontFamily,
                 textShadow: labelRendering.hasShadow
-                  ? `${labelRendering.shadowOffsetPx}px ${labelRendering.shadowOffsetPx}px 0 rgba(0, 0, 0, 0.85)`
-                  : undefined,
+                  ? (el.color && (el.color[0] * 0.299 + el.color[1] * 0.587 + el.color[2] * 0.114) < 0.5)
+                    ? `${labelRendering.shadowOffsetPx}px ${labelRendering.shadowOffsetPx}px 0 rgba(255, 255, 255, 0.85)`
+                    : `${labelRendering.shadowOffsetPx}px ${labelRendering.shadowOffsetPx}px 0 rgba(0, 0, 0, 0.85)`
+                  : 'none',
               }}
             >
               {labelRendering.text}
@@ -393,8 +406,8 @@ export function CanvasElement({
 
     if (el.type === 'chest_grid_item') {
       return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center border border-zinc-300 bg-black/20 text-xs dark:border-zinc-600 dark:bg-black/40">
-          <span className="opacity-50">{el.collection_index}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center border border-zinc-300 text-xs text-black/40 dark:border-zinc-600 dark:text-white/40">
+          <span>{el.collection_index}</span>
         </div>
       );
     }
@@ -403,9 +416,9 @@ export function CanvasElement({
         el.type === 'input_panel' || el.type === 'screen') {
       const typeLabel = el.type !== 'panel' ? el.type : null;
       return (
-        <div className="absolute inset-0 border border-dashed border-zinc-300 bg-zinc-100/30 dark:border-zinc-700 dark:bg-zinc-800/30">
+        <div className="absolute inset-0 border border-dashed border-zinc-400 dark:border-zinc-700">
           {typeLabel && (
-            <span className="absolute left-1 top-0.5 text-[9px] text-zinc-400 dark:text-zinc-600">
+            <span className="absolute left-1 top-0.5 text-[9px] text-zinc-500/70 dark:text-zinc-400/70">
               {typeLabel}
             </span>
           )}
@@ -416,8 +429,8 @@ export function CanvasElement({
     if (el.type === 'stack_panel') {
       const isHorizontal = el.orientation === 'horizontal';
       return (
-        <div className="absolute inset-0 border border-dashed border-teal-300 bg-teal-100/20 dark:border-teal-800 dark:bg-teal-900/20">
-          <span className="absolute left-1 top-0.5 text-[9px] text-teal-500 dark:text-teal-600">
+        <div className="absolute inset-0 border border-dashed border-teal-400 dark:border-teal-800">
+          <span className="absolute left-1 top-0.5 text-[9px] text-teal-700/60 dark:text-teal-500/60">
             stack_panel ({isHorizontal ? 'H' : 'V'})
           </span>
         </div>
@@ -426,8 +439,8 @@ export function CanvasElement({
 
     if (el.type === 'scroll_view') {
       return (
-        <div className="absolute inset-0 border border-dashed border-indigo-300 bg-indigo-100/20 dark:border-indigo-800 dark:bg-indigo-900/20">
-          <span className="absolute left-1 top-0.5 text-[9px] text-indigo-500 dark:text-indigo-600">
+        <div className="absolute inset-0 border border-dashed border-indigo-400 dark:border-indigo-800">
+          <span className="absolute left-1 top-0.5 text-[9px] text-indigo-700/60 dark:text-indigo-500/60">
             scroll_view
           </span>
         </div>
@@ -436,8 +449,8 @@ export function CanvasElement({
 
     if (el.type === 'button' || el.type === 'toggle' || el.type === 'dropdown') {
       return (
-        <div className="absolute inset-0 border border-solid border-zinc-300 bg-zinc-200/40 dark:border-zinc-600 dark:bg-zinc-700/40">
-          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-500 dark:text-zinc-400">
+        <div className="absolute inset-0 border border-solid border-zinc-400 dark:border-zinc-600">
+          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-600/70 dark:text-zinc-400/70">
             {el.type}
           </span>
         </div>
@@ -447,8 +460,8 @@ export function CanvasElement({
     if (el.type === 'slider' || el.type === 'slider_box' ||
         el.type === 'edit_box' || el.type === 'scrollbar_track' || el.type === 'scrollbar_box') {
       return (
-        <div className="absolute inset-0 border border-solid border-zinc-300 bg-zinc-100/40 dark:border-zinc-600 dark:bg-zinc-800/40">
-          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-400 dark:text-zinc-500">
+        <div className="absolute inset-0 border border-solid border-zinc-400 dark:border-zinc-600">
+          <span className="absolute left-1 top-0.5 text-[9px] text-zinc-500/70 dark:text-zinc-400/70">
             {el.type}
           </span>
         </div>
@@ -457,16 +470,16 @@ export function CanvasElement({
 
     if (el.type === 'factory' || el.type === 'grid') {
       return (
-        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-zinc-300 bg-zinc-100/20 dark:border-zinc-600 dark:bg-zinc-800/20">
-          <span className="text-[9px] text-zinc-400 dark:text-zinc-600">{el.type}</span>
+        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-zinc-400 dark:border-zinc-600">
+          <span className="text-[9px] text-zinc-500/70 dark:text-zinc-500/70">{el.type}</span>
         </div>
       );
     }
 
     if (el.type === 'custom' || el.type === 'selection_wheel') {
       return (
-        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-amber-300 bg-amber-100/20 dark:border-amber-800 dark:bg-amber-900/20">
-          <span className="text-[9px] text-amber-500 dark:text-amber-600">{el.type}</span>
+        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-amber-500 dark:border-amber-800">
+          <span className="text-[9px] text-amber-700/60 dark:text-amber-600/60">{el.type}</span>
         </div>
       );
     }
@@ -476,6 +489,7 @@ export function CanvasElement({
 
   return (
     <Rnd
+      resizeHandleStyles={RESIZE_HANDLE_STYLES}
       size={{ width: el.size[0], height: el.size[1] }}
       position={{ x: displayPosition[0], y: displayPosition[1] }}
       onDragStop={(_, data) => {
