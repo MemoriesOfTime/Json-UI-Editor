@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, DragEvent, MouseEvent } from 'react';
 import { Rnd } from 'react-rnd';
 import { Image as ImageIcon } from 'lucide-react';
@@ -12,6 +12,115 @@ import {
 import type { ElementType, UIElement } from '../store/useStore';
 
 export const COMPONENT_DRAG_MIME = 'application/x-jsonui-component-type';
+
+interface StandardImageCanvasProps {
+  objectUrl: string;
+  name: string;
+  uvX: number;
+  uvY: number;
+  sourceUvW: number;
+  sourceUvH: number;
+  size: [number, number];
+  bilinear: boolean;
+  clipStyle?: CSSProperties;
+  filterStr?: string;
+  keepRatio: boolean;
+  fill: boolean;
+}
+
+function StandardImageCanvas({
+  objectUrl,
+  name,
+  uvX,
+  uvY,
+  sourceUvW,
+  sourceUvH,
+  size,
+  bilinear,
+  clipStyle,
+  filterStr,
+  keepRatio,
+  fill,
+}: StandardImageCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const displayW = Math.max(1, Math.round(size[0]));
+    const displayH = Math.max(1, Math.round(size[1]));
+    const dpr = window.devicePixelRatio || 1;
+    const pixelW = Math.max(1, Math.round(displayW * dpr));
+    const pixelH = Math.max(1, Math.round(displayH * dpr));
+
+    canvas.width = pixelW;
+    canvas.height = pixelH;
+    canvas.style.width = `${displayW}px`;
+    canvas.style.height = `${displayH}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const image = new Image();
+    image.decoding = 'async';
+
+    let cancelled = false;
+    image.onload = () => {
+      if (cancelled) return;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, displayW, displayH);
+      ctx.imageSmoothingEnabled = bilinear;
+      if (bilinear) {
+        ctx.imageSmoothingQuality = 'high';
+      }
+
+      const scaleXRaw = displayW / sourceUvW;
+      const scaleYRaw = displayH / sourceUvH;
+      const uniformScale = keepRatio
+        ? fill
+          ? Math.max(scaleXRaw, scaleYRaw)
+          : Math.min(scaleXRaw, scaleYRaw)
+        : null;
+      const scaleX = uniformScale ?? scaleXRaw;
+      const scaleY = uniformScale ?? scaleYRaw;
+      const destW = sourceUvW * scaleX;
+      const destH = sourceUvH * scaleY;
+      const offsetX = keepRatio ? (displayW - destW) / 2 : 0;
+      const offsetY = keepRatio ? (displayH - destH) / 2 : 0;
+
+      ctx.drawImage(
+        image,
+        uvX,
+        uvY,
+        sourceUvW,
+        sourceUvH,
+        offsetX,
+        offsetY,
+        destW,
+        destH,
+      );
+    };
+    image.src = objectUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bilinear, fill, keepRatio, objectUrl, size, sourceUvH, sourceUvW, uvX, uvY]);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={clipStyle}>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 h-full w-full"
+        draggable={false}
+        style={{ filter: filterStr }}
+        aria-label={name}
+      />
+    </div>
+  );
+}
 
 interface Props {
   el: UIElement;
@@ -179,7 +288,7 @@ export function CanvasElement({
         }
 
         // 标准 UV 渲染：
-        // 当 uv_size 超出纹理实际边界时，按可用源区域裁剪后再拉伸到目标尺寸。
+        // 以纹理内有效源区域作为采样基准，再拉伸到目标尺寸。
         const sourceUvW = Math.max(
           0,
           Math.min(uvW, textureAsset.naturalWidth - uvX),
@@ -194,35 +303,22 @@ export function CanvasElement({
 
         const keepRatio = el.keep_ratio === true;
         const fill = el.fill === true;
-        const scaleXRaw = el.size[0] / sourceUvW;
-        const scaleYRaw = el.size[1] / sourceUvH;
-        const uniformScale = keepRatio
-          ? fill
-            ? Math.max(scaleXRaw, scaleYRaw)
-            : Math.min(scaleXRaw, scaleYRaw)
-          : null;
-        const scaleX = uniformScale ?? scaleXRaw;
-        const scaleY = uniformScale ?? scaleYRaw;
-        const sourceWidth = sourceUvW * scaleX;
-        const sourceHeight = sourceUvH * scaleY;
-        const offsetX = keepRatio ? (el.size[0] - sourceWidth) / 2 : 0;
-        const offsetY = keepRatio ? (el.size[1] - sourceHeight) / 2 : 0;
 
         return (
-          <div className="absolute inset-0 overflow-hidden" style={clipStyle}>
-            <img
-              src={textureAsset.objectUrl}
-              alt={el.name}
-              draggable={false}
-              style={{
-                position: 'absolute',
-                left: offsetX - uvX * scaleX,
-                top: offsetY - uvY * scaleY,
-                width: textureAsset.naturalWidth * scaleX,
-                height: textureAsset.naturalHeight * scaleY,
-                imageRendering: rendering,
-                filter: filterStr,
-              }}
+          <div className="absolute inset-0">
+            <StandardImageCanvas
+              objectUrl={textureAsset.objectUrl}
+              name={el.name}
+              uvX={uvX}
+              uvY={uvY}
+              sourceUvW={sourceUvW}
+              sourceUvH={sourceUvH}
+              size={el.size}
+              bilinear={bilinear}
+              clipStyle={clipStyle}
+              filterStr={filterStr}
+              keepRatio={keepRatio}
+              fill={fill}
             />
             {colorOverlay}
           </div>
