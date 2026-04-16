@@ -96,6 +96,12 @@ export const en: Record<string, string> = {
   // Texture panel
   'texture.title': 'Textures',
   'texture.dropHint': 'Drop images or click to upload',
+  'texture.preview.fitWindow': 'Fit Window',
+  'texture.preview.fitWidth': 'Fit Width',
+  'texture.preview.fitHeight': 'Fit Height',
+  'texture.preview.actualSize': 'Actual Size',
+  'texture.preview.reset': 'Reset View',
+  'texture.preview.displaySize': '{w}×{h} px',
 
   // Status messages
   'status.resourcePackLoaded':

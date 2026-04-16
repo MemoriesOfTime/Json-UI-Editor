@@ -96,6 +96,12 @@ export const zh: Record<string, string> = {
   // 纹理面板
   'texture.title': '纹理',
   'texture.dropHint': '拖拽图片或点击上传',
+  'texture.preview.fitWindow': '适应窗口',
+  'texture.preview.fitWidth': '适应宽度',
+  'texture.preview.fitHeight': '适应高度',
+  'texture.preview.actualSize': '原始大小',
+  'texture.preview.reset': '重置视图',
+  'texture.preview.displaySize': '{w}×{h} 像素',
 
   // 状态消息
   'status.resourcePackLoaded': '资源包已加载，可直接拖拽组件到画布',
