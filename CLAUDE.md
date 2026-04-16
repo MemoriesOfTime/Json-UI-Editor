@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-JsonUI Editor — 一个基于浏览器的 Minecraft Bedrock Edition UI JSON 可视化编辑器。用户通过 File System Access API 加载资源包目录，在画布上拖拽/编辑 UI 元素，最终导出为 Bedrock 格式的 JSON 文件。
+Json UI Editor — 一个基于浏览器的 Minecraft Bedrock Edition UI JSON 可视化编辑器。用户通过 File System Access API 加载资源包目录，在画布上拖拽/编辑 UI 元素，最终导出为 Bedrock 格式的 JSON 文件。
 
 **注意**: 需要 Chrome/Edge 86+ 才能使用 File System Access API。
 
