@@ -110,6 +110,16 @@ export interface ElementDirty {
   type?: boolean;
 }
 
+interface EditorSnapshot {
+  elements: UIElement[];
+  selectedId: string | null;
+}
+
+interface EditorHistoryEntry {
+  past: EditorSnapshot[];
+  future: EditorSnapshot[];
+}
+
 interface EditorState {
   project: ResourcePackProject | null;
   activeFile: string | null;
@@ -118,6 +128,9 @@ interface EditorState {
   drafts: Record<string, UIElement[]>;
   selectedId: string | null;
   textureMap: Record<string, TextureAsset>;
+  history: Record<string, EditorHistoryEntry>;
+  canUndo: boolean;
+  canRedo: boolean;
   setProject: (project: ResourcePackProject) => void;
   setActiveFile: (filePath: string) => void;
   setElements: (elements: UIElement[]) => void;
@@ -127,6 +140,8 @@ interface EditorState {
   removeElement: (id: string) => void;
   addTexture: (asset: TextureAsset) => void;
   removeTexture: (path: string) => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 export const ANCHOR_OPTIONS: AnchorType[] = [
@@ -326,6 +341,7 @@ export function resolveControlFrame(
 }
 
 let idCounter = 0;
+const MAX_HISTORY_ENTRIES = 100;
 
 function nextId(): string {
   return `el_${++idCounter}`;
@@ -340,6 +356,55 @@ function persistDraft(
   return {
     ...drafts,
     [activeFile]: elements,
+  };
+}
+
+function cloneHistoryValue<T>(value: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function createSnapshot(
+  elements: UIElement[],
+  selectedId: string | null,
+): EditorSnapshot {
+  return {
+    elements: cloneHistoryValue(elements),
+    selectedId,
+  };
+}
+
+function getHistoryEntry(
+  history: Record<string, EditorHistoryEntry>,
+  activeFile: string | null,
+): EditorHistoryEntry {
+  if (!activeFile) {
+    return { past: [], future: [] };
+  }
+
+  return history[activeFile] ?? { past: [], future: [] };
+}
+
+function trimHistoryEntries(entries: EditorSnapshot[]): EditorSnapshot[] {
+  if (entries.length <= MAX_HISTORY_ENTRIES) {
+    return entries;
+  }
+
+  return entries.slice(-MAX_HISTORY_ENTRIES);
+}
+
+function getHistoryFlags(
+  history: Record<string, EditorHistoryEntry>,
+  activeFile: string | null,
+): Pick<EditorState, 'canUndo' | 'canRedo'> {
+  const entry = activeFile ? history[activeFile] : undefined;
+
+  return {
+    canUndo: Boolean(entry?.past.length),
+    canRedo: Boolean(entry?.future.length),
   };
 }
 
@@ -756,6 +821,58 @@ export function resolveOffsetFromPosition(
   ];
 }
 
+function resolveSelection(
+  elements: UIElement[],
+  selectedId: string | null,
+): string | null {
+  if (!selectedId) {
+    return null;
+  }
+
+  return findElementById(elements, selectedId) ? selectedId : null;
+}
+
+function commitElementsChange(
+  state: EditorState,
+  elements: UIElement[],
+  selectedId: string | null,
+): Partial<EditorState> {
+  const nextSelectedId = resolveSelection(elements, selectedId);
+  const drafts = persistDraft(state.activeFile, state.drafts, elements);
+
+  if (!state.activeFile) {
+    return {
+      elements,
+      drafts,
+      selectedId: nextSelectedId,
+      ...getHistoryFlags(state.history, state.activeFile),
+    };
+  }
+
+  const currentHistoryEntry = getHistoryEntry(state.history, state.activeFile);
+  const nextHistory = {
+    ...state.history,
+    [state.activeFile]: {
+      past: trimHistoryEntries([
+        ...currentHistoryEntry.past,
+        createSnapshot(
+          state.elements,
+          resolveSelection(state.elements, state.selectedId),
+        ),
+      ]),
+      future: [],
+    },
+  };
+
+  return {
+    elements,
+    drafts,
+    selectedId: nextSelectedId,
+    history: nextHistory,
+    ...getHistoryFlags(nextHistory, state.activeFile),
+  };
+}
+
 export const useStore = create<EditorState>((set) => ({
   project: null,
   activeFile: null,
@@ -764,6 +881,9 @@ export const useStore = create<EditorState>((set) => ({
   drafts: {},
   selectedId: null,
   textureMap: {},
+  history: {},
+  canUndo: false,
+  canRedo: false,
   setProject: (project) => {
     idCounter = 0;
     set((state) => {
@@ -776,6 +896,9 @@ export const useStore = create<EditorState>((set) => ({
         selectedId: null,
         canvasSize: [320, 240] as [number, number],
         textureMap: {},
+        history: {},
+        canUndo: false,
+        canRedo: false,
       };
     });
   },
@@ -787,6 +910,7 @@ export const useStore = create<EditorState>((set) => ({
           elements: [],
           selectedId: null,
           canvasSize: [320, 240] as [number, number],
+          ...getHistoryFlags(state.history, null),
         };
       }
 
@@ -797,6 +921,7 @@ export const useStore = create<EditorState>((set) => ({
           elements: [],
           selectedId: null,
           canvasSize: [320, 240] as [number, number],
+          ...getHistoryFlags(state.history, null),
         };
       }
 
@@ -813,22 +938,22 @@ export const useStore = create<EditorState>((set) => ({
       const elements =
         state.drafts[filePath] || parsedControlsToElements(controls, canvasSize);
 
-      return { activeFile: filePath, elements, selectedId: null, canvasSize };
+      return {
+        activeFile: filePath,
+        elements,
+        selectedId: null,
+        canvasSize,
+        ...getHistoryFlags(state.history, filePath),
+      };
     });
   },
   setElements: (elements) =>
-    set((state) => ({
-      elements,
-      drafts: persistDraft(state.activeFile, state.drafts, elements),
-    })),
+    set((state) => commitElementsChange(state, elements, state.selectedId)),
   selectElement: (id) => set({ selectedId: id }),
   updateElement: (id, updates) =>
     set((state) => {
       const elements = updateElementInTree(state.elements, id, updates);
-      return {
-        elements,
-        drafts: persistDraft(state.activeFile, state.drafts, elements),
-      };
+      return commitElementsChange(state, elements, state.selectedId);
     }),
   addElement: (type, options) => {
     let createdId: string | null = null;
@@ -847,11 +972,7 @@ export const useStore = create<EditorState>((set) => ({
 
       createdId = newElement.id;
 
-      return {
-        elements,
-        selectedId: newElement.id,
-        drafts: persistDraft(state.activeFile, state.drafts, elements),
-      };
+      return commitElementsChange(state, elements, newElement.id);
     });
 
     return createdId;
@@ -859,11 +980,8 @@ export const useStore = create<EditorState>((set) => ({
   removeElement: (id) =>
     set((state) => {
       const elements = removeElementFromTree(state.elements, id);
-      return {
-        elements,
-        selectedId: state.selectedId === id ? null : state.selectedId,
-        drafts: persistDraft(state.activeFile, state.drafts, elements),
-      };
+      const nextSelectedId = resolveSelection(elements, state.selectedId);
+      return commitElementsChange(state, elements, nextSelectedId);
     }),
   addTexture: (asset) =>
     set((state) => ({
@@ -878,5 +996,80 @@ export const useStore = create<EditorState>((set) => ({
         delete next[path];
       }
       return { textureMap: next };
+    }),
+  undo: () =>
+    set((state) => {
+      if (!state.activeFile) {
+        return {};
+      }
+
+      const historyEntry = getHistoryEntry(state.history, state.activeFile);
+      const previousSnapshot = historyEntry.past.at(-1);
+      if (!previousSnapshot) {
+        return {};
+      }
+
+      const nextHistory = {
+        ...state.history,
+        [state.activeFile]: {
+          past: historyEntry.past.slice(0, -1),
+          future: [
+            ...historyEntry.future,
+            createSnapshot(
+              state.elements,
+              resolveSelection(state.elements, state.selectedId),
+            ),
+          ],
+        },
+      };
+      const nextElements = cloneHistoryValue(previousSnapshot.elements);
+      const nextSelectedId = resolveSelection(
+        nextElements,
+        previousSnapshot.selectedId,
+      );
+
+      return {
+        elements: nextElements,
+        drafts: persistDraft(state.activeFile, state.drafts, nextElements),
+        selectedId: nextSelectedId,
+        history: nextHistory,
+        ...getHistoryFlags(nextHistory, state.activeFile),
+      };
+    }),
+  redo: () =>
+    set((state) => {
+      if (!state.activeFile) {
+        return {};
+      }
+
+      const historyEntry = getHistoryEntry(state.history, state.activeFile);
+      const nextSnapshot = historyEntry.future.at(-1);
+      if (!nextSnapshot) {
+        return {};
+      }
+
+      const nextHistory = {
+        ...state.history,
+        [state.activeFile]: {
+          past: trimHistoryEntries([
+            ...historyEntry.past,
+            createSnapshot(
+              state.elements,
+              resolveSelection(state.elements, state.selectedId),
+            ),
+          ]),
+          future: historyEntry.future.slice(0, -1),
+        },
+      };
+      const nextElements = cloneHistoryValue(nextSnapshot.elements);
+      const nextSelectedId = resolveSelection(nextElements, nextSnapshot.selectedId);
+
+      return {
+        elements: nextElements,
+        drafts: persistDraft(state.activeFile, state.drafts, nextElements),
+        selectedId: nextSelectedId,
+        history: nextHistory,
+        ...getHistoryFlags(nextHistory, state.activeFile),
+      };
     }),
 }));

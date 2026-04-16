@@ -106,6 +106,19 @@ function getViewportPresetValue(viewportSize: [number, number]): string {
   return preset?.value ?? 'custom';
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.isContentEditable ||
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'SELECT'
+  );
+}
+
 function App() {
   const {
     project,
@@ -120,6 +133,10 @@ function App() {
     setProject,
     setActiveFile,
     addTexture,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
   } = useStore();
 
   const t = useT();
@@ -152,6 +169,41 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (showPreview) {
+        return;
+      }
+
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) {
+        return;
+      }
+
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const shouldUndo = key === 'z' && !event.shiftKey;
+      const shouldRedo = key === 'y' || (key === 'z' && event.shiftKey);
+
+      if (shouldUndo && canUndo) {
+        event.preventDefault();
+        undo();
+      }
+
+      if (shouldRedo && canRedo) {
+        event.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [canRedo, canUndo, redo, showPreview, undo]);
 
   useEffect(
     () => () => {
@@ -411,7 +463,6 @@ function App() {
       parentSize,
     );
 
-    addElement(type, { parentId, position: nextPosition });
     addElement(type, { parentId, position: nextPosition });
   }
 

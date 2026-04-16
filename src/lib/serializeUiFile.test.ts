@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { beforeEach } from 'node:test';
 import { resolveLabelAlignment, resolveLabelRendering } from './labelRendering.ts';
 import {
   applyAnchor,
   parsedControlsToElements,
   resolveOffsetFromPosition,
+  useStore,
 } from '../store/useStore.ts';
 import type { UIElement } from '../store/useStore.ts';
 import { parseUiJson } from './parseUiJson.ts';
@@ -32,6 +33,42 @@ function getFirstControl(
   const controls = root.controls as Array<Record<string, unknown>>;
   return controls[0];
 }
+
+function createTestElement(overrides: Partial<UIElement> = {}): UIElement {
+  return {
+    id: 'el_test',
+    type: 'panel',
+    sourceType: 'panel',
+    name: 'panel_1',
+    rawProps: {},
+    size: [100, 100],
+    offset: [0, 0],
+    anchor_from: 'top_left',
+    anchor_to: 'top_left',
+    layer: 1,
+    children: [],
+    ...overrides,
+  };
+}
+
+function resetEditorStore() {
+  useStore.setState({
+    project: null,
+    activeFile: 'test.json',
+    canvasSize: [320, 240],
+    elements: [],
+    drafts: { 'test.json': [] },
+    selectedId: null,
+    textureMap: {},
+    history: {},
+    canUndo: false,
+    canRedo: false,
+  } as Partial<ReturnType<typeof useStore.getState>>);
+}
+
+beforeEach(() => {
+  resetEditorStore();
+});
 
 test('未编辑时保留根节点和子节点的布局表达式', () => {
   const rawJson = {
@@ -235,4 +272,79 @@ test('label 渲染计算遵循显式对齐、字号缩放和阴影设置', () =>
   assert.equal(rendering.fontFamily, '"Courier New", "Lucida Console", monospace');
   assert.equal(defaultRendering.lineHeightPx, 12);
   assert.ok(defaultRendering.lineHeightPx > defaultRendering.fontSizePx);
+});
+
+test('store 支持撤销和重做元素更新', () => {
+  const element = createTestElement();
+  useStore.setState({
+    elements: [element],
+    drafts: { 'test.json': [element] },
+    selectedId: element.id,
+  });
+
+  useStore.getState().updateElement(element.id, { offset: [24, 36] });
+
+  assert.deepEqual(useStore.getState().elements[0]?.offset, [24, 36]);
+  assert.equal(useStore.getState().canUndo, true);
+
+  useStore.getState().undo();
+
+  assert.deepEqual(useStore.getState().elements[0]?.offset, [0, 0]);
+  assert.equal(useStore.getState().selectedId, element.id);
+  assert.equal(useStore.getState().canRedo, true);
+  assert.deepEqual(useStore.getState().drafts['test.json']?.[0]?.offset, [0, 0]);
+
+  useStore.getState().redo();
+
+  assert.deepEqual(useStore.getState().elements[0]?.offset, [24, 36]);
+  assert.equal(useStore.getState().selectedId, element.id);
+});
+
+test('undo 后的新编辑会清空 redo 历史', () => {
+  const element = createTestElement();
+  useStore.setState({
+    elements: [element],
+    drafts: { 'test.json': [element] },
+    selectedId: element.id,
+  });
+
+  useStore.getState().updateElement(element.id, { offset: [10, 12] });
+  useStore.getState().updateElement(element.id, { size: [120, 80] });
+  useStore.getState().undo();
+
+  assert.equal(useStore.getState().canRedo, true);
+  assert.deepEqual(useStore.getState().elements[0]?.size, [100, 100]);
+  assert.deepEqual(useStore.getState().elements[0]?.offset, [10, 12]);
+
+  useStore.getState().updateElement(element.id, { name: 'panel_renamed' });
+
+  assert.equal(useStore.getState().canRedo, false);
+  assert.deepEqual(useStore.getState().elements[0]?.offset, [10, 12]);
+  assert.equal(useStore.getState().elements[0]?.name, 'panel_renamed');
+});
+
+test('删除选中元素后可以撤销恢复元素和选中态', () => {
+  const element = createTestElement();
+  useStore.setState({
+    elements: [element],
+    drafts: { 'test.json': [element] },
+    selectedId: element.id,
+  });
+
+  useStore.getState().removeElement(element.id);
+
+  assert.equal(useStore.getState().elements.length, 0);
+  assert.equal(useStore.getState().selectedId, null);
+  assert.equal(useStore.getState().canUndo, true);
+
+  useStore.getState().undo();
+
+  assert.equal(useStore.getState().elements.length, 1);
+  assert.equal(useStore.getState().elements[0]?.id, element.id);
+  assert.equal(useStore.getState().selectedId, element.id);
+
+  useStore.getState().redo();
+
+  assert.equal(useStore.getState().elements.length, 0);
+  assert.equal(useStore.getState().selectedId, null);
 });
