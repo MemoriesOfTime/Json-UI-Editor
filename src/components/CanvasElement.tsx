@@ -13,6 +13,8 @@ import {
 import type { ElementType, UIElement } from '../store/useStore';
 
 export const COMPONENT_DRAG_MIME = 'application/x-jsonui-component-type';
+const NESTED_ELEMENT_WRAPPER_CLASS = 'jsonui-nested-element-wrapper';
+const NESTED_ELEMENT_CANCEL_SELECTOR = `.${NESTED_ELEMENT_WRAPPER_CLASS}, .${NESTED_ELEMENT_WRAPPER_CLASS} *`;
 
 const RESIZE_HANDLE_STYLES: Record<string, CSSProperties> = {
   top: { width: '100%', height: '6px', top: '-4px', left: '0', cursor: 'row-resize' },
@@ -492,6 +494,7 @@ export function CanvasElement({
       resizeHandleStyles={RESIZE_HANDLE_STYLES}
       size={{ width: el.size[0], height: el.size[1] }}
       position={{ x: displayPosition[0], y: displayPosition[1] }}
+      cancel={NESTED_ELEMENT_CANCEL_SELECTOR}
       onDragStop={(_, data) => {
         const nextOffset = resolveOffsetFromPosition(
           el.anchor_from,
@@ -589,19 +592,20 @@ export function CanvasElement({
         {el.children.length > 0 && (
           <div className="absolute inset-0">
             {el.children.map((child) => (
-              <CanvasElement
-                key={child.id}
-                el={child}
-                parentSize={el.size}
-                selectedId={selectedId}
-                draggingType={draggingType}
-                canvasScale={canvasScale}
-                parentAlpha={childAlpha}
-                onSelect={onSelect}
-                onDragStop={onDragStop}
-                onResizeStop={onResizeStop}
-                onDropNewElement={onDropNewElement}
-              />
+              <div key={child.id} className={NESTED_ELEMENT_WRAPPER_CLASS}>
+                <CanvasElement
+                  el={child}
+                  parentSize={el.size}
+                  selectedId={selectedId}
+                  draggingType={draggingType}
+                  canvasScale={canvasScale}
+                  parentAlpha={childAlpha}
+                  onSelect={onSelect}
+                  onDragStop={onDragStop}
+                  onResizeStop={onResizeStop}
+                  onDropNewElement={onDropNewElement}
+                />
+              </div>
             ))}
           </div>
         )}
