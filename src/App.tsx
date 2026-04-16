@@ -1169,7 +1169,7 @@ function App() {
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.anchorFrom')}</label>
                   <select
-                    value={selectedElement.anchor_from || 'top_left'}
+                    value={selectedElement.anchor_from || 'center'}
                     onChange={(event) =>
                       updateElement(selectedElement.id, {
                         anchor_from: event.target.value as UIElement['anchor_from'],
@@ -1187,7 +1187,7 @@ function App() {
                 <div className="space-y-2">
                   <label className="text-xs text-zinc-500 dark:text-zinc-400">{t('props.anchorTo')}</label>
                   <select
-                    value={selectedElement.anchor_to || 'top_left'}
+                    value={selectedElement.anchor_to || 'center'}
                     onChange={(event) =>
                       updateElement(selectedElement.id, {
                         anchor_to: event.target.value as UIElement['anchor_to'],

@@ -36,6 +36,14 @@ export interface ParsedControl {
   allow_clipping?: boolean;
   text?: string;
   color?: [number, number, number];
+  text_alignment?: string;
+  shadow?: boolean;
+  font_size?: string;
+  font_scale_factor?: number;
+  line_padding?: number;
+  localize?: boolean;
+  font_type?: string;
+  backup_font_type?: string;
   texture?: string;
   uv?: [number, number];
   uv_size?: [number, number];
@@ -114,6 +122,22 @@ function parseControl(rawKey: string, rawValue: Record<string, unknown>): Parsed
   if (typeof rawValue.text === 'string') ctrl.text = rawValue.text;
   if (Array.isArray(rawValue.color) && rawValue.color.length >= 3) {
     ctrl.color = [Number(rawValue.color[0]), Number(rawValue.color[1]), Number(rawValue.color[2])];
+  }
+  if (typeof rawValue.text_alignment === 'string') {
+    ctrl.text_alignment = rawValue.text_alignment;
+  }
+  if (typeof rawValue.shadow === 'boolean') ctrl.shadow = rawValue.shadow;
+  if (typeof rawValue.font_size === 'string') ctrl.font_size = rawValue.font_size;
+  if (typeof rawValue.font_scale_factor === 'number') {
+    ctrl.font_scale_factor = rawValue.font_scale_factor;
+  }
+  if (typeof rawValue.line_padding === 'number') {
+    ctrl.line_padding = rawValue.line_padding;
+  }
+  if (typeof rawValue.localize === 'boolean') ctrl.localize = rawValue.localize;
+  if (typeof rawValue.font_type === 'string') ctrl.font_type = rawValue.font_type;
+  if (typeof rawValue.backup_font_type === 'string') {
+    ctrl.backup_font_type = rawValue.backup_font_type;
   }
   if (typeof rawValue.texture === 'string') ctrl.texture = rawValue.texture;
   if (Array.isArray(rawValue.uv) && rawValue.uv.length >= 2) {

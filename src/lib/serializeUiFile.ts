@@ -86,6 +86,14 @@ function serializeElement(el: UIElement): Record<string, unknown> {
   if (el.type === 'label') {
     baseProps.text = el.text || '';
     setOptionalProp(baseProps, 'color', el.color);
+    setOptionalProp(baseProps, 'text_alignment', el.text_alignment);
+    setOptionalProp(baseProps, 'shadow', el.shadow);
+    setOptionalProp(baseProps, 'font_size', el.font_size);
+    setOptionalProp(baseProps, 'font_scale_factor', el.font_scale_factor);
+    setOptionalProp(baseProps, 'line_padding', el.line_padding);
+    setOptionalProp(baseProps, 'localize', el.localize);
+    setOptionalProp(baseProps, 'font_type', el.font_type);
+    setOptionalProp(baseProps, 'backup_font_type', el.backup_font_type);
   }
 
   if (el.type === 'collection_panel') {

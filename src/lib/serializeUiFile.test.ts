@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parsedControlsToElements } from '../store/useStore.ts';
+import { resolveLabelAlignment, resolveLabelRendering } from './labelRendering.ts';
+import {
+  applyAnchor,
+  parsedControlsToElements,
+  resolveOffsetFromPosition,
+} from '../store/useStore.ts';
 import type { UIElement } from '../store/useStore.ts';
 import { parseUiJson } from './parseUiJson.ts';
 import { serializeUiFile } from './serializeUiFile.ts';
@@ -135,4 +140,99 @@ test('真实 chest_grid_item 保留集合语义且不回写 type', () => {
   assert.equal('type' in slot, false);
   assert.equal(slot.collection_index, 0);
   assert.equal(slot.collection_name, 'container_items');
+});
+
+test('锚点语义遵循 wiki：anchor_from 取父级锚点，anchor_to 取元素锚点', () => {
+  assert.deepEqual(
+    applyAnchor('center', 'top_left', 200, 100, 20, 10, [0, 0]),
+    [100, 50],
+  );
+  assert.deepEqual(
+    applyAnchor(undefined, undefined, 200, 100, 20, 10, [0, 0]),
+    [90, 45],
+  );
+  assert.deepEqual(
+    resolveOffsetFromPosition('center', 'top_left', 200, 100, 20, 10, [100, 50]),
+    [0, 0],
+  );
+});
+
+test('label 解析与序列化保留 Bedrock 文本属性', () => {
+  const rawJson = {
+    namespace: 'test',
+    sample_menu_root: {
+      controls: [
+        {
+          title: {
+            type: 'label',
+            text: 'Inventory',
+            color: [1, 0.8, 0.2],
+            text_alignment: 'bottom_right',
+            shadow: true,
+            font_size: 'large',
+            font_scale_factor: 0.65,
+            line_padding: 2,
+            localize: true,
+            font_type: 'MinecraftTen',
+            backup_font_type: 'NotoSans',
+          },
+        },
+      ],
+    },
+  };
+
+  const { parsed, elements } = buildElements(rawJson);
+
+  assert.equal(elements[0].text_alignment, 'bottom_right');
+  assert.equal(elements[0].shadow, true);
+  assert.equal(elements[0].font_size, 'large');
+  assert.equal(elements[0].font_scale_factor, 0.65);
+  assert.equal(elements[0].line_padding, 2);
+  assert.equal(elements[0].localize, true);
+  assert.equal(elements[0].font_type, 'MinecraftTen');
+  assert.equal(elements[0].backup_font_type, 'NotoSans');
+
+  const serializedJson = JSON.parse(serializeUiFile(parsed, elements)) as Record<string, unknown>;
+  const control = getFirstControl(serializedJson, 'sample_menu_root');
+  const label = control.title as Record<string, unknown>;
+
+  assert.equal(label.text_alignment, 'bottom_right');
+  assert.equal(label.shadow, true);
+  assert.equal(label.font_size, 'large');
+  assert.equal(label.font_scale_factor, 0.65);
+  assert.equal(label.line_padding, 2);
+  assert.equal(label.localize, true);
+  assert.equal(label.font_type, 'MinecraftTen');
+  assert.equal(label.backup_font_type, 'NotoSans');
+});
+
+test('label 渲染计算遵循显式对齐、字号缩放和阴影设置', () => {
+  const rendering = resolveLabelRendering({
+    text: 'Inventory',
+    text_alignment: 'bottom_right',
+    font_size: 'large',
+    font_scale_factor: 0.65,
+    line_padding: 2,
+    shadow: true,
+    font_type: 'MinecraftTen',
+    backup_font_type: 'NotoSans',
+  });
+
+  assert.deepEqual(resolveLabelAlignment(undefined, 'center', 'top_left'), {
+    horizontal: 'center',
+    vertical: 'center',
+  });
+  const defaultRendering = resolveLabelRendering({
+    text: 'Title',
+    font_size: 'normal',
+  });
+
+  assert.equal(rendering.horizontalAlign, 'end');
+  assert.equal(rendering.verticalAlign, 'end');
+  assert.equal(rendering.fontSizePx, 10.4);
+  assert.equal(rendering.lineHeightPx, 14.48);
+  assert.equal(rendering.hasShadow, true);
+  assert.equal(rendering.fontFamily, '"Courier New", "Lucida Console", monospace');
+  assert.equal(defaultRendering.lineHeightPx, 12);
+  assert.ok(defaultRendering.lineHeightPx > defaultRendering.fontSizePx);
 });

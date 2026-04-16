@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, DragEvent, MouseEvent } from 'react';
 import { Rnd } from 'react-rnd';
 import { Image as ImageIcon } from 'lucide-react';
+import { resolveLabelRendering } from '../lib/labelRendering';
 import { getTextureLookupCandidates } from '../lib/texturePath';
 import {
   applyAnchor,
@@ -193,6 +194,19 @@ export function CanvasElement({
   // visible 属性为 false 时跳过渲染
   if (el.visible === false) return null;
 
+  const getFlexAlignment = (
+    align: 'start' | 'center' | 'end',
+  ): 'flex-start' | 'center' | 'flex-end' => {
+    switch (align) {
+      case 'start':
+        return 'flex-start';
+      case 'end':
+        return 'flex-end';
+      default:
+        return 'center';
+    }
+  };
+
   const renderContent = () => {
     if (el.type === 'image') {
       if (textureAsset) {
@@ -335,16 +349,44 @@ export function CanvasElement({
     }
 
     if (el.type === 'label') {
+      const labelRendering = resolveLabelRendering(el);
+
       return (
         <div
-          className="absolute inset-0 flex items-center justify-center truncate px-1 text-sm"
+          className="absolute inset-0 overflow-hidden"
           style={{
             color: el.color
               ? `rgb(${el.color[0] * 255},${el.color[1] * 255},${el.color[2] * 255})`
               : 'white',
           }}
         >
-          {el.text}
+          <div
+            className="flex h-full w-full overflow-hidden"
+            style={{
+              alignItems: getFlexAlignment(labelRendering.verticalAlign),
+              justifyContent: getFlexAlignment(labelRendering.horizontalAlign),
+            }}
+          >
+            <span
+              className="block w-full whitespace-pre-wrap break-words"
+              style={{
+                textAlign:
+                  labelRendering.horizontalAlign === 'start'
+                    ? 'left'
+                    : labelRendering.horizontalAlign === 'end'
+                      ? 'right'
+                      : 'center',
+                fontSize: `${labelRendering.fontSizePx}px`,
+                lineHeight: `${labelRendering.lineHeightPx}px`,
+                fontFamily: labelRendering.fontFamily,
+                textShadow: labelRendering.hasShadow
+                  ? `${labelRendering.shadowOffsetPx}px ${labelRendering.shadowOffsetPx}px 0 rgba(0, 0, 0, 0.85)`
+                  : undefined,
+              }}
+            >
+              {labelRendering.text}
+            </span>
+          </div>
         </div>
       );
     }

@@ -53,6 +53,14 @@ export interface UIElement {
   allow_clipping?: boolean;
   text?: string;
   color?: [number, number, number];
+  text_alignment?: string;
+  shadow?: boolean;
+  font_size?: string;
+  font_scale_factor?: number;
+  line_padding?: number;
+  localize?: boolean;
+  font_type?: string;
+  backup_font_type?: string;
   collection_index?: number;
   collection_name?: string;
   texture?: string;
@@ -391,6 +399,16 @@ function controlToElement(
   if (ctrl.allow_clipping !== undefined) el.allow_clipping = ctrl.allow_clipping;
   if (ctrl.text !== undefined) el.text = ctrl.text;
   if (ctrl.color) el.color = ctrl.color;
+  if (ctrl.text_alignment) el.text_alignment = ctrl.text_alignment;
+  if (ctrl.shadow !== undefined) el.shadow = ctrl.shadow;
+  if (ctrl.font_size) el.font_size = ctrl.font_size;
+  if (ctrl.font_scale_factor !== undefined) {
+    el.font_scale_factor = ctrl.font_scale_factor;
+  }
+  if (ctrl.line_padding !== undefined) el.line_padding = ctrl.line_padding;
+  if (ctrl.localize !== undefined) el.localize = ctrl.localize;
+  if (ctrl.font_type) el.font_type = ctrl.font_type;
+  if (ctrl.backup_font_type) el.backup_font_type = ctrl.backup_font_type;
   if (ctrl.collection_index !== undefined) el.collection_index = ctrl.collection_index;
   if (ctrl.collection_name) el.collection_name = ctrl.collection_name;
   if (ctrl.texture) el.texture = ctrl.texture;
@@ -628,6 +646,8 @@ function createElementTemplate(
     rawProps: {},
     size,
     offset: position,
+    anchor_from: 'top_left',
+    anchor_to: 'top_left',
     layer: 1,
     children: [],
   };
@@ -660,7 +680,7 @@ function getAnchorPoint(
   width: number,
   height: number,
 ): [number, number] {
-  const currentAnchor = anchor || 'top_left';
+  const currentAnchor = anchor || 'center';
 
   switch (currentAnchor) {
     case 'top_left':
@@ -694,12 +714,12 @@ export function applyAnchor(
   offset: [number, number],
 ): [number, number] {
   const [parentAnchorX, parentAnchorY] = getAnchorPoint(
-    anchorTo,
+    anchorFrom,
     parentW,
     parentH,
   );
   const [elementAnchorX, elementAnchorY] = getAnchorPoint(
-    anchorFrom,
+    anchorTo,
     elW,
     elH,
   );
@@ -720,12 +740,12 @@ export function resolveOffsetFromPosition(
   position: [number, number],
 ): [number, number] {
   const [parentAnchorX, parentAnchorY] = getAnchorPoint(
-    anchorTo,
+    anchorFrom,
     parentW,
     parentH,
   );
   const [elementAnchorX, elementAnchorY] = getAnchorPoint(
-    anchorFrom,
+    anchorTo,
     elW,
     elH,
   );
