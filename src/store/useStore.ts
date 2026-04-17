@@ -138,6 +138,7 @@ interface EditorState {
   updateElement: (id: string, updates: Partial<UIElement>) => void;
   addElement: (type: ElementType, options?: AddElementOptions) => string | null;
   removeElement: (id: string) => void;
+  moveElement: (elementId: string, targetParentId: string | null, targetIndex: number) => void;
   addUiFile: (name: string) => void;
   addTexture: (asset: TextureAsset) => void;
   removeTexture: (path: string) => void;
@@ -662,6 +663,75 @@ function insertElementInTree(
   return { elements: nextElements, inserted };
 }
 
+function insertElementAt(
+  elements: UIElement[],
+  parentId: string | null,
+  newElement: UIElement,
+  index: number,
+): { elements: UIElement[]; inserted: boolean } {
+  if (!parentId) {
+    const arr = [...elements];
+    arr.splice(index, 0, newElement);
+    return { elements: arr, inserted: true };
+  }
+
+  let inserted = false;
+  const nextElements = elements.map((el) => {
+    if (el.id === parentId) {
+      inserted = true;
+      const children = [...el.children];
+      children.splice(index, 0, newElement);
+      return { ...el, children };
+    }
+    if (el.children.length === 0) return el;
+    const result = insertElementAt(el.children, parentId, newElement, index);
+    if (result.inserted) {
+      inserted = true;
+      return { ...el, children: result.elements };
+    }
+    return el;
+  });
+  return { elements: nextElements, inserted };
+}
+
+function moveElementInTree(
+  elements: UIElement[],
+  elementId: string,
+  targetParentId: string | null,
+  targetIndex: number,
+): UIElement[] {
+  const element = findElementById(elements, elementId);
+  if (!element) return elements;
+
+  if (targetParentId) {
+    if (elementId === targetParentId) return elements;
+    const target = findElementById(elements, targetParentId);
+    if (!target) return elements;
+    if (!isContainerElement(target.type)) return elements;
+    const ids = new Set(flattenElements(element.children).map((c) => c.id));
+    if (ids.has(targetParentId)) return elements;
+  }
+
+  const sameParent =
+    targetParentId === findParentIdByChildId(elements, elementId);
+  const originalSiblings = targetParentId
+    ? (findElementById(elements, targetParentId)?.children ?? [])
+    : elements;
+  const originalIndex = originalSiblings.findIndex((c) => c.id === elementId);
+
+  if (sameParent && originalIndex === targetIndex) return elements;
+
+  const next = removeElementFromTree(elements, elementId);
+
+  let adjustedIndex = targetIndex;
+  if (sameParent && originalIndex >= 0 && originalIndex < targetIndex) {
+    adjustedIndex = targetIndex - 1;
+  }
+
+  const result = insertElementAt(next, targetParentId, element, adjustedIndex);
+  return result.inserted ? result.elements : elements;
+}
+
 function getNextUniqueName(elements: UIElement[], prefix: string): string {
   const usedNames = new Set(flattenElements(elements).map((el) => el.name));
   let index = 1;
@@ -983,6 +1053,12 @@ export const useStore = create<EditorState>((set) => ({
       const elements = removeElementFromTree(state.elements, id);
       const nextSelectedId = resolveSelection(elements, state.selectedId);
       return commitElementsChange(state, elements, nextSelectedId);
+    }),
+  moveElement: (elementId, targetParentId, targetIndex) =>
+    set((state) => {
+      const elements = moveElementInTree(state.elements, elementId, targetParentId, targetIndex);
+      if (elements === state.elements) return {};
+      return commitElementsChange(state, elements, elementId);
     }),
   addUiFile: (name) => {
     set((state) => {

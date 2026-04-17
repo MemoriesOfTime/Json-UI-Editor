@@ -731,6 +731,7 @@ function App() {
                       depth={0}
                       selectedId={selectedId}
                       onSelect={selectElement}
+                      parentId={null}
                     />
                   ))}
                 </ul>
