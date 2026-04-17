@@ -480,8 +480,8 @@ export function CanvasElement({
 
     if (el.type === 'custom' || el.type === 'selection_wheel') {
       return (
-        <div className="absolute inset-0 flex items-center justify-center border border-dotted border-amber-500 dark:border-amber-800">
-          <span className="text-[9px] text-amber-700/60 dark:text-amber-600/60">{el.type}</span>
+        <div className="absolute inset-0 flex items-center justify-center border border-dotted mc-placeholder">
+          <span className="text-[9px] mc-placeholder">{el.type}</span>
         </div>
       );
     }
@@ -583,7 +583,7 @@ export function CanvasElement({
           <div
             className={`pointer-events-none absolute inset-0 border border-dashed transition-colors ${
               isDropTargetActive
-                ? 'border-emerald-400 bg-emerald-500/10'
+                ? 'mc-select-outline'
                 : 'border-transparent'
             }`}
           />

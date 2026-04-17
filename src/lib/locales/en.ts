@@ -21,6 +21,10 @@ export const en: Record<string, string> = {
   'btn.switchToDark': 'Switch to Dark Mode',
   'btn.lightMode': 'Light',
   'btn.darkMode': 'Dark',
+  'btn.styleMinecraft': 'Classic',
+  'btn.styleOreUI': 'Ore UI',
+  'btn.styleLabel': 'Style',
+  'btn.themeLabel': 'Theme',
   'btn.newFile': 'New File',
 
   // Sidebar

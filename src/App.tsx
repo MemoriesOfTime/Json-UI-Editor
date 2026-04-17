@@ -1,4 +1,5 @@
 import {
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -11,6 +12,7 @@ import {
   Layers,
   Moon,
   MousePointer2,
+  Palette,
   Plus,
   Save,
   Settings,
@@ -144,7 +146,9 @@ function App() {
   const locale = useI18nStore((s) => s.locale);
   const setLocale = useI18nStore((s) => s.setLocale);
   const theme = useThemeStore((s) => s.theme);
+  const style = useThemeStore((s) => s.style);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  const setStyle = useThemeStore((s) => s.setStyle);
 
   const [showPreview, setShowPreview] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -163,10 +167,12 @@ function App() {
   const [editorToolbarHeight, setEditorToolbarHeight] = useState(0);
   const [editorViewportBounds, setEditorViewportBounds] =
     useState<[number, number]>([1920, 1080]);
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const backgroundInputRef = useRef<HTMLInputElement | null>(null);
   const backgroundLoadVersionRef = useRef(0);
   const editorCanvasAreaRef = useRef<HTMLDivElement | null>(null);
   const editorToolbarRef = useRef<HTMLDivElement | null>(null);
+  const appearanceRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -268,6 +274,17 @@ function App() {
       window.removeEventListener('resize', measureBounds);
     };
   }, [activeFile, project]);
+
+  useEffect(() => {
+    if (!isAppearanceOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (appearanceRef.current && !appearanceRef.current.contains(e.target as Node)) {
+        setIsAppearanceOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [isAppearanceOpen]);
 
   const currentFile = project?.uiFiles.find((file) => file.path === activeFile) || null;
   const editableRoot = currentFile?.parsed.rootControls.find(
@@ -608,16 +625,16 @@ function App() {
     : t('sidebar.rootCanvas');
 
   return (
-    <div className="flex h-screen w-full select-none mc-bg mc-text">
-      <aside className="flex w-72 flex-col mc-panel">
-        <div className="flex h-14 items-center px-4 mc-border-h">
+    <div className="app-shell flex min-h-0 w-full select-none mc-bg mc-text">
+      <aside className="flex h-full min-h-0 w-72 flex-col overflow-hidden mc-panel">
+        <div className="flex h-14 shrink-0 items-center px-4 mc-border-h">
           <h1 className="flex items-center gap-2 mc-title text-xl font-bold">
             <LayoutDashboard className="h-5 w-5" />
             {t('app.title')}
           </h1>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-6">
           <div className="space-y-6">
             <button
               onClick={handleOpenProject}
@@ -726,7 +743,7 @@ function App() {
       </aside>
 
       <main
-        className="relative flex flex-1 flex-col overflow-hidden"
+        className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
         onClick={() => selectElement(null)}
       >
         <button
@@ -746,7 +763,9 @@ function App() {
 
         <header
           className="flex h-14 items-center justify-between px-4 mc-panel border-l-0 border-r-0"
-          style={{ boxShadow: 'inset 0 1px 0 var(--mc-panel-shadow), inset 0 -1px 0 var(--mc-panel-shadow)' }}
+          style={style === 'oreui'
+            ? { boxShadow: '0 2px 8px var(--mc-panel-shadow)' }
+            : { boxShadow: 'inset 0 1px 0 var(--mc-panel-shadow), inset 0 -1px 0 var(--mc-panel-shadow)' }}
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex items-center gap-4">
@@ -759,18 +778,53 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className="mc-btn flex items-center gap-1.5 text-xs"
-              title={theme === 'dark' ? t('btn.switchToLight') : t('btn.switchToDark')}
-            >
-              {theme === 'dark' ? (
-                <Sun className="h-3.5 w-3.5" />
-              ) : (
-                <Moon className="h-3.5 w-3.5" />
+            <div className="relative" ref={appearanceRef}>
+              <button
+                onClick={() => setIsAppearanceOpen((v) => !v)}
+                className="mc-btn flex items-center gap-1.5 text-xs"
+              >
+                <Palette className="h-3.5 w-3.5" />
+                {style === 'minecraft' ? t('btn.styleMinecraft') : t('btn.styleOreUI')}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </button>
+              {isAppearanceOpen && (
+                <div className="mc-panel absolute right-0 top-full mt-1 z-50 min-w-[160px] py-1.5">
+                  <div className="mc-dropdown-label">{t('btn.styleLabel')}</div>
+                  <button
+                    onClick={() => { setStyle('minecraft'); setIsAppearanceOpen(false); }}
+                    className="mc-dropdown-item w-full text-xs"
+                  >
+                    <span className="flex-1 text-left">{t('btn.styleMinecraft')}</span>
+                    {style === 'minecraft' && <Check className="h-3.5 w-3.5 mc-text-check" />}
+                  </button>
+                  <button
+                    onClick={() => { setStyle('oreui'); setIsAppearanceOpen(false); }}
+                    className="mc-dropdown-item w-full text-xs"
+                  >
+                    <span className="flex-1 text-left">{t('btn.styleOreUI')}</span>
+                    {style === 'oreui' && <Check className="h-3.5 w-3.5 mc-text-check" />}
+                  </button>
+                  <div className="mc-dropdown-separator" />
+                  <div className="mc-dropdown-label">{t('btn.themeLabel')}</div>
+                  <button
+                    onClick={() => { if (theme !== 'light') toggleTheme(); setIsAppearanceOpen(false); }}
+                    className="mc-dropdown-item w-full text-xs"
+                  >
+                    <Sun className="h-3.5 w-3.5" />
+                    <span className="flex-1 text-left">{t('btn.lightMode')}</span>
+                    {theme === 'light' && <Check className="h-3.5 w-3.5 mc-text-check" />}
+                  </button>
+                  <button
+                    onClick={() => { if (theme !== 'dark') toggleTheme(); setIsAppearanceOpen(false); }}
+                    className="mc-dropdown-item w-full text-xs"
+                  >
+                    <Moon className="h-3.5 w-3.5" />
+                    <span className="flex-1 text-left">{t('btn.darkMode')}</span>
+                    {theme === 'dark' && <Check className="h-3.5 w-3.5 mc-text-check" />}
+                  </button>
+                </div>
               )}
-              {theme === 'dark' ? t('btn.lightMode') : t('btn.darkMode')}
-            </button>
+            </div>
             <button
               onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
               className="mc-btn flex items-center gap-1.5 text-xs"
@@ -781,24 +835,24 @@ function App() {
             <button
               onClick={() => setShowPreview(true)}
               disabled={!currentFile}
-              className="mc-btn text-sm"
+              className="mc-btn text-xs"
             >
               {t('btn.preview')}
             </button>
             <button
               onClick={handleSave}
               disabled={!currentFile || saving}
-              className="mc-btn mc-btn-primary flex items-center gap-2 text-sm"
+              className="mc-btn mc-btn-primary flex items-center gap-1.5 text-xs"
             >
-              <Save className="h-4 w-4" />
+              <Save className="h-3.5 w-3.5" />
               {saving ? t('btn.saving') : t('btn.save')}
             </button>
             <button
               onClick={handleExport}
               disabled={!currentFile}
-              className="mc-btn mc-btn-blue flex items-center gap-2 text-sm"
+              className="mc-btn mc-btn-blue flex items-center gap-1.5 text-xs"
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-3.5 w-3.5" />
               {t('btn.export')}
             </button>
           </div>
@@ -1069,8 +1123,8 @@ function App() {
                           <div
                             className={`absolute overflow-hidden border transition-colors ${
                               draggingType
-                                ? 'border-emerald-400/70 ring-2 ring-emerald-500/20 bg-emerald-500/10'
-                                : 'border-zinc-400/30 dark:border-zinc-500/30'
+                                ? 'mc-select-outline'
+                                : 'mc-canvas-border border-zinc-400/30 dark:border-zinc-500/30'
                             }`}
                             style={{
                               left: logicalRootPosition[0],
@@ -1123,12 +1177,16 @@ function App() {
     </main>
 
       <aside
-        className={`flex flex-col overflow-hidden mc-panel border-t-0 transition-all duration-300 ${
-          isRightSidebarOpen ? 'w-80 border-l' : 'w-0 border-l-0'
+        className={`flex min-h-0 flex-col overflow-hidden mc-panel border-t-0 transition-all duration-300 ${
+          isRightSidebarOpen ? 'w-80' : 'w-0 border-l-0 border-r-0'
         }`}
-        style={{ boxShadow: isRightSidebarOpen ? 'inset 1px 0 0 var(--mc-panel-shadow), inset -1px -1px 0 var(--mc-panel-shadow)' : undefined }}
+        style={isRightSidebarOpen
+          ? (style === 'oreui'
+            ? { boxShadow: '2px 0 8px var(--mc-panel-shadow)' }
+            : { boxShadow: 'inset 1px 0 0 var(--mc-panel-shadow), inset -1px -1px 0 var(--mc-panel-shadow)' })
+          : undefined}
       >
-        <div className="flex h-full w-80 flex-col">
+        <div className="flex h-full min-h-0 w-80 flex-col">
           <div className="flex h-14 items-center px-4 mc-border-h">
             <h2 className="flex items-center gap-2 text-sm font-semibold mc-text">
               <Settings className="h-4 w-4" />

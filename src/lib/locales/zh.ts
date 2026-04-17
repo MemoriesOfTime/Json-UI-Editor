@@ -21,6 +21,10 @@ export const zh: Record<string, string> = {
   'btn.switchToDark': '切换到暗色模式',
   'btn.lightMode': '亮色',
   'btn.darkMode': '暗色',
+  'btn.styleMinecraft': '经典',
+  'btn.styleOreUI': 'Ore UI',
+  'btn.styleLabel': '视觉风格',
+  'btn.themeLabel': '颜色模式',
   'btn.newFile': '新建文件',
 
   // 侧边栏
