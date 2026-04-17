@@ -24,6 +24,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
 import { CanvasElement, COMPONENT_DRAG_MIME } from './components/CanvasElement';
 import { ElementTreeNode } from './components/ElementTreeNode';
+import { Footer } from './components/Footer';
 import { SidebarSection } from './components/SidebarSection';
 import { TexturePanel } from './components/TexturePanel';
 import { useI18nStore, useT } from './lib/i18n';
@@ -625,7 +626,8 @@ function App() {
     : t('sidebar.rootCanvas');
 
   return (
-    <div className="app-shell flex min-h-0 w-full select-none mc-bg mc-text">
+    <div className="flex flex-col h-screen w-full select-none mc-bg mc-text">
+      <div className="flex min-h-0 flex-1">
       <aside className="flex h-full min-h-0 w-72 flex-col overflow-hidden mc-panel">
         <div className="flex h-14 shrink-0 items-center px-4 mc-border-h">
           <h1 className="flex items-center gap-2 mc-title text-xl font-bold">
@@ -1644,6 +1646,8 @@ function App() {
           </div>
         </div>
       )}
+      </div>
+      <Footer />
     </div>
   );
 }

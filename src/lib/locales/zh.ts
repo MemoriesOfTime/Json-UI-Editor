@@ -128,4 +128,11 @@ export const zh: Record<string, string> = {
   // 顶部栏
   'header.noFileSelected': '未选择文件',
   'header.elements': '{count} 个元素',
+
+  // 页脚
+  'footer.copyright': '© {year} MemoriesOfTime. All rights reserved.',
+  'footer.links': '友情链接',
+  'footer.links.mot': 'MemoriesOfTime',
+  'footer.links.bedrockDocs': 'Bedrock 文档',
+  'footer.contact.github': 'GitHub',
 };

@@ -131,4 +131,11 @@ export const en: Record<string, string> = {
   // Header
   'header.noFileSelected': 'No file selected',
   'header.elements': '{count} elements',
+
+  // Footer
+  'footer.copyright': '© {year} MemoriesOfTime. All rights reserved.',
+  'footer.links': 'Links',
+  'footer.links.mot': 'MemoriesOfTime',
+  'footer.links.bedrockDocs': 'Bedrock Docs',
+  'footer.contact.github': 'GitHub',
 };
