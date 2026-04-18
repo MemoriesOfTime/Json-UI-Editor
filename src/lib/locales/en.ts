@@ -17,6 +17,7 @@ export const en: Record<string, string> = {
   'btn.expandCanvasToolbar': 'Expand Viewport Bar',
   'btn.collapseCanvasToolbar': 'Collapse Viewport Bar',
   'btn.toggleRightSidebar': 'Toggle Right Sidebar',
+  'btn.toggleMenu': 'Menu',
   'btn.switchToLight': 'Switch to Light Mode',
   'btn.switchToDark': 'Switch to Dark Mode',
   'btn.lightMode': 'Light',

@@ -10,6 +10,7 @@ import {
   Languages,
   LayoutDashboard,
   Layers,
+  Menu,
   Moon,
   MousePointer2,
   Palette,
@@ -153,7 +154,10 @@ function App() {
 
   const [showPreview, setShowPreview] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(
+    () => (typeof window !== 'undefined' ? window.innerWidth >= 768 : true),
+  );
   const [isEditorToolbarCollapsed, setIsEditorToolbarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -627,8 +631,21 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen w-full select-none mc-bg mc-text">
+      {(isLeftSidebarOpen || isRightSidebarOpen) && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => {
+            setIsLeftSidebarOpen(false);
+            setIsRightSidebarOpen(false);
+          }}
+        />
+      )}
       <div className="flex min-h-0 flex-1">
-      <aside className="flex h-full min-h-0 w-72 flex-col overflow-hidden mc-panel">
+      <aside
+        className={`mc-panel fixed md:static inset-y-0 left-0 z-40 md:z-auto flex h-full min-h-0 w-72 shrink-0 flex-col overflow-hidden transform md:transform-none transition-transform md:transition-none ${
+          isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
         <div className="flex h-14 shrink-0 items-center px-4 mc-border-h">
           <h1 className="flex items-center gap-2 mc-title text-xl font-bold">
             <LayoutDashboard className="h-5 w-5" />
@@ -754,7 +771,7 @@ function App() {
             e.stopPropagation();
             setIsRightSidebarOpen(!isRightSidebarOpen);
           }}
-          className="mc-panel absolute right-0 top-1/2 z-50 flex h-16 w-5 -translate-y-1/2 items-center justify-center mc-text-dim"
+          className="mc-panel absolute right-0 top-1/2 z-50 hidden h-16 w-5 -translate-y-1/2 items-center justify-center mc-text-dim md:flex"
           title={t('btn.toggleRightSidebar')}
         >
           {isRightSidebarOpen ? (
@@ -771,11 +788,20 @@ function App() {
             : { boxShadow: 'inset 0 1px 0 var(--mc-panel-shadow), inset 0 -1px 0 var(--mc-panel-shadow)' }}
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="flex items-center gap-4">
-            <span className="mc-text text-sm font-medium">
+          <div className="flex min-w-0 items-center gap-2 md:gap-4">
+            <button
+              type="button"
+              onClick={() => setIsLeftSidebarOpen(true)}
+              className="mc-btn p-2 md:hidden"
+              title={t('btn.toggleMenu')}
+              aria-label={t('btn.toggleMenu')}
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <span className="truncate mc-text text-sm font-medium">
               {currentFile?.path || t('header.noFileSelected')}
             </span>
-            <span className="text-xs mc-text-dim">
+            <span className="hidden text-xs mc-text-dim md:inline">
               {t('header.elements', { count: elementCount })}
             </span>
           </div>
@@ -787,8 +813,10 @@ function App() {
                 className="mc-btn flex items-center gap-1.5 text-xs"
               >
                 <Palette className="h-3.5 w-3.5" />
-                {style === 'minecraft' ? t('btn.styleMinecraft') : t('btn.styleOreUI')}
-                <ChevronDown className="h-3 w-3 opacity-60" />
+                <span className="hidden md:inline">
+                  {style === 'minecraft' ? t('btn.styleMinecraft') : t('btn.styleOreUI')}
+                </span>
+                <ChevronDown className="hidden h-3 w-3 opacity-60 md:inline" />
               </button>
               {isAppearanceOpen && (
                 <div className="mc-panel absolute right-0 top-full mt-1 z-50 min-w-[160px] py-1.5">
@@ -833,12 +861,12 @@ function App() {
               className="mc-btn flex items-center gap-1.5 text-xs"
             >
               <Languages className="h-3.5 w-3.5" />
-              {locale === 'zh' ? 'EN' : '中文'}
+              <span className="hidden md:inline">{locale === 'zh' ? 'EN' : '中文'}</span>
             </button>
             <button
               onClick={() => setShowPreview(true)}
               disabled={!currentFile}
-              className="mc-btn text-xs"
+              className="mc-btn hidden text-xs md:inline-flex"
             >
               {t('btn.preview')}
             </button>
@@ -846,17 +874,30 @@ function App() {
               onClick={handleSave}
               disabled={!currentFile || saving}
               className="mc-btn mc-btn-primary flex items-center gap-1.5 text-xs"
+              title={t('btn.save')}
             >
               <Save className="h-3.5 w-3.5" />
-              {saving ? t('btn.saving') : t('btn.save')}
+              <span className="hidden md:inline">
+                {saving ? t('btn.saving') : t('btn.save')}
+              </span>
             </button>
             <button
               onClick={handleExport}
               disabled={!currentFile}
               className="mc-btn mc-btn-blue flex items-center gap-1.5 text-xs"
+              title={t('btn.export')}
             >
               <Download className="h-3.5 w-3.5" />
-              {t('btn.export')}
+              <span className="hidden md:inline">{t('btn.export')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsRightSidebarOpen((v) => !v)}
+              className="mc-btn p-2 md:hidden"
+              title={t('btn.toggleRightSidebar')}
+              aria-label={t('btn.toggleRightSidebar')}
+            >
+              <Settings className="h-4 w-4" />
             </button>
           </div>
         </header>
@@ -1180,8 +1221,10 @@ function App() {
     </main>
 
       <aside
-        className={`flex min-h-0 flex-col overflow-hidden mc-panel border-t-0 transition-all duration-300 ${
-          isRightSidebarOpen ? 'w-80' : 'w-0 border-l-0 border-r-0'
+        className={`mc-panel flex min-h-0 flex-col overflow-hidden border-t-0 fixed md:static inset-y-0 right-0 z-40 md:z-auto w-80 transform md:transform-none transition-transform md:transition-all md:duration-300 ${
+          isRightSidebarOpen
+            ? 'translate-x-0 md:w-80'
+            : 'translate-x-full md:translate-x-0 md:w-0 md:border-l-0 md:border-r-0'
         }`}
         style={isRightSidebarOpen
           ? (style === 'oreui'

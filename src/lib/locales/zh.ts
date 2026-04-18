@@ -17,6 +17,7 @@ export const zh: Record<string, string> = {
   'btn.expandCanvasToolbar': '展开视口栏',
   'btn.collapseCanvasToolbar': '收起视口栏',
   'btn.toggleRightSidebar': '切换右侧属性栏',
+  'btn.toggleMenu': '菜单',
   'btn.switchToLight': '切换到亮色模式',
   'btn.switchToDark': '切换到暗色模式',
   'btn.lightMode': '亮色',
